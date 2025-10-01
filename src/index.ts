@@ -1,4 +1,3 @@
-// src/index.ts
 import 'dotenv/config';
 import { Elysia } from 'elysia';
 import { cors } from '@elysiajs/cors';
@@ -38,7 +37,10 @@ const app = new Elysia()
   .use(benefitsRoutes)
   .use(contactsRoutes)
   .use(notificationsRoutes)
-  .listen(process.env.PORT || 3000);
+  .listen({
+    port: process.env.PORT || 3000,
+    hostname: '0.0.0.0'
+  });
 
 console.log(`🚀 Server running at http://${app.server?.hostname}:${app.server?.port}`);
 console.log(`📚 Swagger docs at http://${app.server?.hostname}:${app.server?.port}/swagger`);
