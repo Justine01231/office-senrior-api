@@ -5,6 +5,15 @@ import { healthRecords } from '../db/schema';
 import { eq } from 'drizzle-orm';
 
 export const healthRoutes = new Elysia({ prefix: '/api/health' })
+
+  .get('/', async () => {
+  const allRecords = await db.select().from(healthRecords);
+  return {
+    success: true,
+    data: allRecords,
+    count: allRecords.length
+  };
+})
   
   .get('/senior/:seniorId', async ({ params }) => {
     const records = await db.select()
