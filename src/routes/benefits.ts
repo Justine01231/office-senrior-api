@@ -1,10 +1,37 @@
-// src/routes/benefits.ts
 import { Elysia, t } from 'elysia';
 import { db } from '../db';
 import { benefits } from '../db/schema';
 import { eq } from 'drizzle-orm';
 
 export const benefitsRoutes = new Elysia({ prefix: '/api/benefits' })
+  
+  .get('/', async () => {
+    const allBenefits = await db.select()
+      .from(benefits);
+    
+    return {
+      success: true,
+      data: allBenefits,
+      count: allBenefits.length
+    };
+  })
+  
+  .get('/:id', async ({ params }) => {
+    const benefit = await db.select()
+      .from(benefits)
+      .where(eq(benefits.id, parseInt(params.id)));
+    
+    if (!benefit.length) {
+      throw new Error('Benefit not found');
+    }
+    
+    return {
+      success: true,
+      data: benefit[0]
+    };
+  }, {
+    params: t.Object({ id: t.String() })
+  })
   
   .get('/senior/:seniorId', async ({ params }) => {
     const seniorBenefits = await db.select()
