@@ -50,12 +50,12 @@ export const benefitsRoutes = new Elysia({ prefix: '/api/benefits' })
       .values({
         seniorId: parseInt(body.seniorId),
         benefitType: body.benefitType,
-        applicationDate: body.applicationDate,
-        renewalDate: body.renewalDate,
-        amount: body.amount,
-        status: body.status,
-        caseWorker: body.caseWorker,
-        notes: body.notes
+        applicationDate: body.applicationDate || null,
+        renewalDate: body.renewalDate || null,
+        amount: body.amount || null,
+        status: body.status || 'pending',
+        caseWorker: body.caseWorker || null,
+        notes: body.notes || null
       })
       .returning();
     
@@ -71,7 +71,7 @@ export const benefitsRoutes = new Elysia({ prefix: '/api/benefits' })
       applicationDate: t.Optional(t.String()),
       renewalDate: t.Optional(t.String()),
       amount: t.Optional(t.String()),
-      status: t.Optional(t.String()),
+      status: t.String(),
       caseWorker: t.Optional(t.String()),
       notes: t.Optional(t.String())
     })
