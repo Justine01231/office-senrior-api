@@ -6,11 +6,10 @@ import { eq } from 'drizzle-orm';
 
 export const benefitsRoutes = new Elysia({ prefix: '/api/benefits' })
   
-  // Get benefits by senior
   .get('/senior/:seniorId', async ({ params }) => {
     const seniorBenefits = await db.select()
       .from(benefits)
-      .where(eq(benefits.seniorId, params.seniorId));
+      .where(eq(benefits.seniorId, parseInt(params.seniorId)));
     
     return {
       success: true,
@@ -19,12 +18,17 @@ export const benefitsRoutes = new Elysia({ prefix: '/api/benefits' })
     };
   })
   
-  // Create benefit
   .post('/', async ({ body }) => {
     const newBenefit = await db.insert(benefits)
       .values({
-        ...body,
-        id: crypto.randomUUID()
+        seniorId: parseInt(body.seniorId),
+        benefitType: body.benefitType,
+        applicationDate: body.applicationDate,
+        renewalDate: body.renewalDate,
+        amount: body.amount,
+        status: body.status,
+        caseWorker: body.caseWorker,
+        notes: body.notes
       })
       .returning();
     
@@ -46,12 +50,10 @@ export const benefitsRoutes = new Elysia({ prefix: '/api/benefits' })
     })
   })
   
-  // Update benefit
- // Update benefit
-.put('/:id', async ({ params, body }) => {
+  .put('/:id', async ({ params, body }) => {
     const updated = await db.update(benefits)
       .set(body)
-      .where(eq(benefits.id, params.id))
+      .where(eq(benefits.id, parseInt(params.id)))
       .returning();
     
     if (!updated.length) {
@@ -76,10 +78,9 @@ export const benefitsRoutes = new Elysia({ prefix: '/api/benefits' })
     })
   })
   
-  // Delete benefit
   .delete('/:id', async ({ params }) => {
     const deleted = await db.delete(benefits)
-      .where(eq(benefits.id, params.id))
+      .where(eq(benefits.id, parseInt(params.id)))
       .returning();
     
     if (!deleted.length) {
@@ -90,4 +91,6 @@ export const benefitsRoutes = new Elysia({ prefix: '/api/benefits' })
       success: true,
       message: 'Benefit deleted'
     };
+  }, {
+    params: t.Object({ id: t.String() })
   });

@@ -20,7 +20,7 @@ export const seniorsRoutes = new Elysia({ prefix: '/api/seniors' })
   .get('/:id', async ({ params }) => {
     const senior = await db.select()
       .from(seniors)
-      .where(eq(seniors.id, params.id))
+      .where(eq(seniors.id, parseInt(params.id)))
       .limit(1);
     
     if (!senior.length) {
@@ -51,7 +51,7 @@ export const seniorsRoutes = new Elysia({ prefix: '/api/seniors' })
       lastName: t.String({ minLength: 1 }),
       phone: t.Optional(t.String()),
       address: t.Optional(t.String()),
-      dateOfBirth: t.String(), // Format: "YYYY-MM-DD"
+      dateOfBirth: t.String(),
       socialSecurity: t.Optional(t.String()),
       emergencyContactName: t.Optional(t.String()),
       emergencyContactPhone: t.Optional(t.String()),
@@ -63,7 +63,7 @@ export const seniorsRoutes = new Elysia({ prefix: '/api/seniors' })
   .put('/:id', async ({ params, body }) => {
     const updated = await db.update(seniors)
       .set({ ...body, updatedAt: new Date() })
-      .where(eq(seniors.id, params.id))
+      .where(eq(seniors.id, parseInt(params.id)))
       .returning();
     
     if (!updated.length) {
@@ -90,7 +90,7 @@ export const seniorsRoutes = new Elysia({ prefix: '/api/seniors' })
   // DELETE senior
   .delete('/:id', async ({ params }) => {
     const deleted = await db.delete(seniors)
-      .where(eq(seniors.id, params.id))
+      .where(eq(seniors.id, parseInt(params.id)))
       .returning();
     
     if (!deleted.length) {

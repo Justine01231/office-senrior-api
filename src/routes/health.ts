@@ -6,11 +6,10 @@ import { eq } from 'drizzle-orm';
 
 export const healthRoutes = new Elysia({ prefix: '/api/health' })
   
-  // Get all health records for a senior
   .get('/senior/:seniorId', async ({ params }) => {
     const records = await db.select()
       .from(healthRecords)
-      .where(eq(healthRecords.seniorId, params.seniorId));
+      .where(eq(healthRecords.seniorId, parseInt(params.seniorId)));
     
     return {
       success: true,
@@ -23,12 +22,10 @@ export const healthRoutes = new Elysia({ prefix: '/api/health' })
     })
   })
   
-  // Create health record
   .post('/', async ({ body }) => {
     const newRecord = await db.insert(healthRecords)
       .values({
-        id: crypto.randomUUID(),
-        seniorId: body.seniorId,
+        seniorId: parseInt(body.seniorId),
         type: body.type,
         title: body.title,
         description: body.description,
@@ -57,7 +54,6 @@ export const healthRoutes = new Elysia({ prefix: '/api/health' })
     })
   })
   
-  // Update health record
   .put('/:id', async ({ params, body }) => {
     const updateData: any = {};
     
@@ -72,7 +68,7 @@ export const healthRoutes = new Elysia({ prefix: '/api/health' })
     
     const updated = await db.update(healthRecords)
       .set(updateData)
-      .where(eq(healthRecords.id, params.id))
+      .where(eq(healthRecords.id, parseInt(params.id)))
       .returning();
     
     if (!updated.length) {
@@ -98,10 +94,9 @@ export const healthRoutes = new Elysia({ prefix: '/api/health' })
     })
   })
   
-  // Delete health record
   .delete('/:id', async ({ params }) => {
     const deleted = await db.delete(healthRecords)
-      .where(eq(healthRecords.id, params.id))
+      .where(eq(healthRecords.id, parseInt(params.id)))
       .returning();
     
     if (!deleted.length) {

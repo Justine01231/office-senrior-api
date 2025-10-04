@@ -6,7 +6,6 @@ import { eq } from 'drizzle-orm';
 
 export const notificationsRoutes = new Elysia({ prefix: '/api/notifications' })
   
-  // Get all notifications
   .get('/', async () => {
     const allNotifications = await db.select().from(notifications);
     return {
@@ -16,11 +15,10 @@ export const notificationsRoutes = new Elysia({ prefix: '/api/notifications' })
     };
   })
   
-  // Get notifications by senior
   .get('/senior/:seniorId', async ({ params }) => {
     const seniorNotifications = await db.select()
       .from(notifications)
-      .where(eq(notifications.seniorId, params.seniorId));
+      .where(eq(notifications.seniorId, parseInt(params.seniorId)));
     
     return {
       success: true,
@@ -29,12 +27,10 @@ export const notificationsRoutes = new Elysia({ prefix: '/api/notifications' })
     };
   })
   
-  // Create notification
-.post('/', async ({ body }) => {
+  .post('/', async ({ body }) => {
     const newNotification = await db.insert(notifications)
       .values({
-        id: crypto.randomUUID(),
-        seniorId: body.seniorId || null,
+        seniorId: body.seniorId ? parseInt(body.seniorId) : null,
         title: body.title,
         type: body.type,
         priority: body.priority || 'normal',
@@ -57,10 +53,9 @@ export const notificationsRoutes = new Elysia({ prefix: '/api/notifications' })
     })
   })
   
-  // Delete notification
   .delete('/:id', async ({ params }) => {
     const deleted = await db.delete(notifications)
-      .where(eq(notifications.id, params.id))
+      .where(eq(notifications.id, parseInt(params.id)))
       .returning();
     
     if (!deleted.length) {
@@ -71,4 +66,6 @@ export const notificationsRoutes = new Elysia({ prefix: '/api/notifications' })
       success: true,
       message: 'Notification deleted'
     };
+  }, {
+    params: t.Object({ id: t.String() })
   });

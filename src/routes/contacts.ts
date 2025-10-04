@@ -6,11 +6,10 @@ import { eq } from 'drizzle-orm';
 
 export const contactsRoutes = new Elysia({ prefix: '/api/contacts' })
   
-  // Get contacts by senior
   .get('/senior/:seniorId', async ({ params }) => {
     const seniorContacts = await db.select()
       .from(contacts)
-      .where(eq(contacts.seniorId, params.seniorId));
+      .where(eq(contacts.seniorId, parseInt(params.seniorId)));
     
     return {
       success: true,
@@ -19,12 +18,16 @@ export const contactsRoutes = new Elysia({ prefix: '/api/contacts' })
     };
   })
   
-  // Create contact
   .post('/', async ({ body }) => {
     const newContact = await db.insert(contacts)
       .values({
-        ...body,
-        id: crypto.randomUUID()
+        seniorId: parseInt(body.seniorId),
+        name: body.name,
+        phone: body.phone,
+        email: body.email,
+        relationship: body.relationship,
+        role: body.role,
+        isEmergency: body.isEmergency
       })
       .returning();
     
@@ -45,11 +48,10 @@ export const contactsRoutes = new Elysia({ prefix: '/api/contacts' })
     })
   })
   
-  // Update contact
-.put('/:id', async ({ params, body }) => {
+  .put('/:id', async ({ params, body }) => {
     const updated = await db.update(contacts)
       .set(body)
-      .where(eq(contacts.id, params.id))
+      .where(eq(contacts.id, parseInt(params.id)))
       .returning();
     
     if (!updated.length) {
@@ -73,10 +75,9 @@ export const contactsRoutes = new Elysia({ prefix: '/api/contacts' })
     })
   })
   
-  // Delete contact
   .delete('/:id', async ({ params }) => {
     const deleted = await db.delete(contacts)
-      .where(eq(contacts.id, params.id))
+      .where(eq(contacts.id, parseInt(params.id)))
       .returning();
     
     if (!deleted.length) {
@@ -87,4 +88,6 @@ export const contactsRoutes = new Elysia({ prefix: '/api/contacts' })
       success: true,
       message: 'Contact deleted'
     };
+  }, {
+    params: t.Object({ id: t.String() })
   });

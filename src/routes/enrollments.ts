@@ -6,12 +6,11 @@ import { eq } from 'drizzle-orm';
 
 export const enrollmentsRoutes = new Elysia({ prefix: '/api/enrollments' })
   
-  // Enroll senior in program
   .post('/', async ({ body }) => {
     const enrollment = await db.insert(enrollments)
       .values({
-        ...body,
-        id: crypto.randomUUID()
+        seniorId: parseInt(body.seniorId),
+        programId: parseInt(body.programId)
       })
       .returning();
     
@@ -27,11 +26,10 @@ export const enrollmentsRoutes = new Elysia({ prefix: '/api/enrollments' })
     })
   })
   
-  // Get enrollments by senior
   .get('/senior/:seniorId', async ({ params }) => {
     const seniorEnrollments = await db.select()
       .from(enrollments)
-      .where(eq(enrollments.seniorId, params.seniorId));
+      .where(eq(enrollments.seniorId, parseInt(params.seniorId)));
     
     return {
       success: true,
@@ -40,11 +38,10 @@ export const enrollmentsRoutes = new Elysia({ prefix: '/api/enrollments' })
     };
   })
   
-  // Get enrollments by program
   .get('/program/:programId', async ({ params }) => {
     const programEnrollments = await db.select()
       .from(enrollments)
-      .where(eq(enrollments.programId, params.programId));
+      .where(eq(enrollments.programId, parseInt(params.programId)));
     
     return {
       success: true,
@@ -53,12 +50,10 @@ export const enrollmentsRoutes = new Elysia({ prefix: '/api/enrollments' })
     };
   })
   
- // Update attendance
-.patch('/:id/attendance', async ({ params }) => {
-    // Get current attendance
+  .patch('/:id/attendance', async ({ params }) => {
     const current = await db.select()
       .from(enrollments)
-      .where(eq(enrollments.id, params.id))
+      .where(eq(enrollments.id, parseInt(params.id)))
       .limit(1);
     
     if (!current.length || !current[0]) {
@@ -68,12 +63,11 @@ export const enrollmentsRoutes = new Elysia({ prefix: '/api/enrollments' })
     const enrollment = current[0];
     const currentCount = enrollment.attendanceCount ?? 0;
     
-    // Increment attendance
     const updated = await db.update(enrollments)
       .set({
         attendanceCount: currentCount + 1
       })
-      .where(eq(enrollments.id, params.id))
+      .where(eq(enrollments.id, parseInt(params.id)))
       .returning();
     
     return {
@@ -85,10 +79,9 @@ export const enrollmentsRoutes = new Elysia({ prefix: '/api/enrollments' })
     params: t.Object({ id: t.String() })
   })
   
-  // Delete enrollment
   .delete('/:id', async ({ params }) => {
     const deleted = await db.delete(enrollments)
-      .where(eq(enrollments.id, params.id))
+      .where(eq(enrollments.id, parseInt(params.id)))
       .returning();
     
     if (!deleted.length) {
@@ -99,4 +92,6 @@ export const enrollmentsRoutes = new Elysia({ prefix: '/api/enrollments' })
       success: true,
       message: 'Enrollment deleted'
     };
+  }, {
+    params: t.Object({ id: t.String() })
   });
