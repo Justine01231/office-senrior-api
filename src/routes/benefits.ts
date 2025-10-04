@@ -48,7 +48,7 @@ export const benefitsRoutes = new Elysia({ prefix: '/api/benefits' })
   .post('/', async ({ body }) => {
     const newBenefit = await db.insert(benefits)
       .values({
-        seniorId: parseInt(body.seniorId),
+        seniorId: body.seniorId,
         benefitType: body.benefitType,
         applicationDate: body.applicationDate || null,
         renewalDate: body.renewalDate || null,
@@ -66,7 +66,7 @@ export const benefitsRoutes = new Elysia({ prefix: '/api/benefits' })
     };
   }, {
     body: t.Object({
-      seniorId: t.String(),
+      seniorId: t.Number(),
       benefitType: t.String(),
       applicationDate: t.Optional(t.String()),
       renewalDate: t.Optional(t.String()),
