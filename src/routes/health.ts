@@ -40,7 +40,6 @@ export const healthRoutes = new Elysia({ prefix: '/api/health' })
         description: body.description,
         dateTime: body.dateTime ? new Date(body.dateTime) : null,
         reminderTime: body.reminderTime,
-        dosage: body.dosage,
         notes: body.notes
       })
       .returning();
@@ -58,7 +57,6 @@ export const healthRoutes = new Elysia({ prefix: '/api/health' })
       description: t.Optional(t.String()),
       dateTime: t.Optional(t.String()),
       reminderTime: t.Optional(t.String()),
-      dosage: t.Optional(t.String()),
       notes: t.Optional(t.String())
     })
   })
@@ -71,7 +69,6 @@ export const healthRoutes = new Elysia({ prefix: '/api/health' })
     if (body.description !== undefined) updateData.description = body.description;
     if (body.dateTime) updateData.dateTime = new Date(body.dateTime);
     if (body.reminderTime) updateData.reminderTime = body.reminderTime;
-    if (body.dosage) updateData.dosage = body.dosage;
     if (body.notes !== undefined) updateData.notes = body.notes;
     if (body.status) updateData.status = body.status;
     
@@ -97,7 +94,6 @@ export const healthRoutes = new Elysia({ prefix: '/api/health' })
       description: t.Optional(t.String()),
       dateTime: t.Optional(t.String()),
       reminderTime: t.Optional(t.String()),
-      dosage: t.Optional(t.String()),
       notes: t.Optional(t.String()),
       status: t.Optional(t.String())
     })

@@ -10,7 +10,6 @@ import { programsRoutes } from './routes/programs';
 import { enrollmentsRoutes } from './routes/enrollments';
 import { benefitsRoutes } from './routes/benefits';
 import { contactsRoutes } from './routes/contacts';
-import { notificationsRoutes } from './routes/notifications';
 
 const app = new Elysia()
   .use(cors())
@@ -40,7 +39,6 @@ const app = new Elysia()
   .use(enrollmentsRoutes)
   .use(benefitsRoutes)
   .use(contactsRoutes)
-  .use(notificationsRoutes)
   .listen({
     port: process.env.PORT || 3000,
     hostname: '0.0.0.0'

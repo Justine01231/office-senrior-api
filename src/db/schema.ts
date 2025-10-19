@@ -29,7 +29,6 @@ export const healthRecords = pgTable('health_records', {
   description: text('description'),
   dateTime: timestamp('date_time'),
   reminderTime: varchar('reminder_time', { length: 10 }),
-  dosage: varchar('dosage', { length: 100 }),
   notes: text('notes'),
   status: varchar('status', { length: 20 }).default('active'),
   createdAt: timestamp('created_at').defaultNow(),
@@ -89,17 +88,6 @@ export const contacts = pgTable('contacts', {
   createdAt: timestamp('created_at').defaultNow(),
 });
 
-// NOTIFICATIONS TABLE
-export const notifications = pgTable('notifications', {
-  id: serial('id').primaryKey(),
-  seniorId: integer('senior_id').references(() => seniors.id, { onDelete: 'cascade' }),
-  title: varchar('title', { length: 200 }).notNull(),
-  type: varchar('type', { length: 50 }).notNull(),
-  priority: varchar('priority', { length: 20 }).default('normal'),
-  scheduledTime: timestamp('scheduled_time'),
-  status: varchar('status', { length: 20 }).default('pending'),
-  createdAt: timestamp('created_at').defaultNow(),
-});
 
 // USERS TABLE - Authentication
 export const users = pgTable('users', {
