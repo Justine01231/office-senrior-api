@@ -1,6 +1,22 @@
 // src/db/schema.ts
 import { pgTable, serial, varchar, text, date, timestamp, integer, boolean } from 'drizzle-orm/pg-core';
 
+// USERS TABLE - Authentication (moved to top to avoid circular reference)
+export const users = pgTable('users', {
+  id: serial('id').primaryKey(),
+  username: varchar('username', { length: 100 }).notNull().unique(),
+  email: varchar('email', { length: 255 }),
+  passwordHash: varchar('password_hash', { length: 255 }).notNull(),
+  role: varchar('role', { length: 50 }).notNull().default('senior'), // admin, staff, senior
+  firstName: varchar('first_name', { length: 100 }),
+  lastName: varchar('last_name', { length: 100 }),
+  assignedBy: integer('assigned_by').references(() => users.id), // For staff created by admin
+  isActive: boolean('is_active').default(true),
+  emailVerified: boolean('email_verified').default(false),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+});
+
 // SENIORS TABLE
 export const seniors = pgTable('seniors', {
   id: serial('id').primaryKey(),
@@ -89,20 +105,6 @@ export const contacts = pgTable('contacts', {
 });
 
 
-// USERS TABLE - Authentication
-export const users = pgTable('users', {
-  id: serial('id').primaryKey(),
-  email: varchar('email', { length: 255 }).notNull().unique(),
-  passwordHash: varchar('password_hash', { length: 255 }).notNull(),
-  role: varchar('role', { length: 50 }).notNull().default('SENIOR'),
-  firstName: varchar('first_name', { length: 100 }),
-  lastName: varchar('last_name', { length: 100 }),
-  isActive: boolean('is_active').default(true),
-  emailVerified: boolean('email_verified').default(false),
-  createdAt: timestamp('created_at').defaultNow(),
-  updatedAt: timestamp('updated_at').defaultNow(),
-});
-
 // REFRESH TOKENS TABLE
 export const refreshTokens = pgTable('refresh_tokens', {
   id: serial('id').primaryKey(),
@@ -110,6 +112,16 @@ export const refreshTokens = pgTable('refresh_tokens', {
   token: varchar('token', { length: 255 }).notNull().unique(),
   expiresAt: timestamp('expires_at').notNull(),
   createdAt: timestamp('created_at').defaultNow(),
+});
+
+// STAFF ASSIGNMENTS TABLE - Which staff manages which seniors
+export const staffAssignments = pgTable('staff_assignments', {
+  id: serial('id').primaryKey(),
+  staffId: integer('staff_id').references(() => users.id, { onDelete: 'cascade' }).notNull(),
+  seniorId: integer('senior_id').references(() => seniors.id, { onDelete: 'cascade' }).notNull(),
+  assignedBy: integer('assigned_by').references(() => users.id).notNull(), // Admin who made assignment
+  assignedAt: timestamp('assigned_at').defaultNow(),
+  isActive: boolean('is_active').default(true),
 });
 
 // USER AUDIT LOG TABLE

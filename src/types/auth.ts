@@ -2,10 +2,12 @@
 
 export interface User {
   id: number;
-  email: string;
+  username: string;
+  email?: string | null;
   role: string;
   firstName?: string | null;
   lastName?: string | null;
+  assignedBy?: number | null;
   isActive: boolean | null;
   emailVerified: boolean | null;
   createdAt: Date | null;
@@ -13,16 +15,17 @@ export interface User {
 }
 
 export interface LoginRequest {
-  email: string;
+  username: string;
   password: string;
 }
 
 export interface RegisterRequest {
-  email: string;
+  username: string;
+  email?: string;
   password: string;
   firstName?: string;
   lastName?: string;
-  role?: 'ADMIN' | 'STAFF' | 'SENIOR' | 'FAMILY';
+  role?: 'admin' | 'staff' | 'senior';
 }
 
 export interface AuthResponse {
@@ -42,7 +45,7 @@ export interface RefreshTokenRequest {
 
 export interface JWTPayload {
   userId: number;
-  email: string;
+  username: string;
   role: string;
   seniorId?: number;
   iat: number;

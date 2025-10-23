@@ -22,11 +22,12 @@ export class AuthService {
       const passwordHash = await this.hashPassword(userData.password);
       
       const [newUser] = await db.insert(users).values({
+        username: userData.username,
         email: userData.email,
         passwordHash,
         firstName: userData.firstName,
         lastName: userData.lastName,
-        role: userData.role || 'SENIOR',
+        role: userData.role || 'senior',
       }).returning();
 
       if (!newUser) return null;
@@ -40,11 +41,11 @@ export class AuthService {
     }
   }
 
-  // Find user by email
-  static async findUserByEmail(email: string): Promise<(User & { passwordHash: string }) | null> {
+  // Find user by username
+  static async findUserByUsername(username: string): Promise<(User & { passwordHash: string }) | null> {
     try {
-      const [user] = await db.select().from(users).where(eq(users.email, email));
-      return user || null;
+      const [user] = await db.select().from(users).where(eq(users.username, username));
+      return user as (User & { passwordHash: string }) || null;
     } catch (error) {
       console.error('Error finding user:', error);
       return null;
@@ -56,10 +57,12 @@ export class AuthService {
     try {
       const [user] = await db.select({
         id: users.id,
+        username: users.username,
         email: users.email,
         role: users.role,
         firstName: users.firstName,
         lastName: users.lastName,
+        assignedBy: users.assignedBy,
         isActive: users.isActive,
         emailVerified: users.emailVerified,
         createdAt: users.createdAt,
@@ -129,11 +132,11 @@ export class AuthService {
 
   // Generate JWT payload
   static async generateJWTPayload(user: User): Promise<JWTPayload> {
-    const seniorId = user.role === 'SENIOR' ? await this.getSeniorIdForUser(user.id) : undefined;
+    const seniorId = user.role === 'senior' ? await this.getSeniorIdForUser(user.id) : undefined;
     
     return {
       userId: user.id,
-      email: user.email,
+      username: user.username,
       role: user.role,
       seniorId: seniorId || undefined,
       iat: Math.floor(Date.now() / 1000),

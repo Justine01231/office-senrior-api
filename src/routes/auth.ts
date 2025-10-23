@@ -11,34 +11,35 @@ export const authRoutes = new Elysia({ prefix: '/auth' })
   // Register endpoint
   .post('/register', async ({ body, set }) => {
     try {
-      const { email, password, firstName, lastName, role } = body as RegisterRequest;
+      const { username, email, password, firstName, lastName, role } = body as RegisterRequest;
 
       // Validate input
-      if (!email || !password) {
+      if (!username || !password) {
         set.status = 400;
         return {
           success: false,
-          message: 'Email and password are required'
+          message: 'Username and password are required'
         } as AuthResponse;
       }
 
       // Check if user already exists
-      const existingUser = await AuthService.findUserByEmail(email);
+      const existingUser = await AuthService.findUserByUsername(username);
       if (existingUser) {
         set.status = 409;
         return {
           success: false,
-          message: 'User with this email already exists'
+          message: 'User with this username already exists'
         } as AuthResponse;
       }
 
       // Create user
       const user = await AuthService.createUser({
+        username,
         email,
         password,
         firstName,
         lastName,
-        role: role || 'SENIOR'
+        role: role || 'senior'
       });
 
       if (!user) {
@@ -79,15 +80,15 @@ export const authRoutes = new Elysia({ prefix: '/auth' })
     }
   }, {
     body: t.Object({
-      email: t.String({ format: 'email' }),
+      username: t.String({ minLength: 3 }),
+      email: t.Optional(t.String({ format: 'email' })),
       password: t.String({ minLength: 6 }),
       firstName: t.Optional(t.String()),
       lastName: t.Optional(t.String()),
       role: t.Optional(t.Union([
-        t.Literal('ADMIN'),
-        t.Literal('STAFF'),
-        t.Literal('SENIOR'),
-        t.Literal('FAMILY')
+        t.Literal('admin'),
+        t.Literal('staff'),
+        t.Literal('senior')
       ]))
     })
   })
@@ -95,19 +96,19 @@ export const authRoutes = new Elysia({ prefix: '/auth' })
   // Login endpoint
   .post('/login', async ({ body, set }) => {
     try {
-      const { email, password } = body as LoginRequest;
+      const { username, password } = body as LoginRequest;
 
       // Validate input
-      if (!email || !password) {
+      if (!username || !password) {
         set.status = 400;
         return {
           success: false,
-          message: 'Email and password are required'
+          message: 'Username and password are required'
         } as AuthResponse;
       }
 
       // Find user
-      const userWithPassword = await AuthService.findUserByEmail(email);
+      const userWithPassword = await AuthService.findUserByUsername(username);
       if (!userWithPassword) {
         set.status = 401;
         return {
@@ -168,7 +169,7 @@ export const authRoutes = new Elysia({ prefix: '/auth' })
     }
   }, {
     body: t.Object({
-      email: t.String({ format: 'email' }),
+      username: t.String(),
       password: t.String()
     })
   })
