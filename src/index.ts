@@ -5,6 +5,7 @@ import { swagger } from '@elysiajs/swagger';
 import { authRoutes } from './routes/auth';
 import { usersRoutes } from './routes/users';
 import { seniorsRoutes } from './routes/seniors';
+import { staffRoutes } from './routes/staff';
 import { healthRoutes } from './routes/health';
 import { programsRoutes } from './routes/programs';
 import { enrollmentsRoutes } from './routes/enrollments';
@@ -34,6 +35,7 @@ const app = new Elysia()
   .use(authRoutes)
   .use(usersRoutes)
   .use(seniorsRoutes)
+  .use(staffRoutes)
   .use(healthRoutes)
   .use(programsRoutes)
   .use(enrollmentsRoutes)

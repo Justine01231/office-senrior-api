@@ -15,6 +15,13 @@
       "when": 1760916338128,
       "tag": "0001_mysterious_klaw",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1761269616662,
+      "tag": "0002_sticky_angel",
+      "breakpoints": true
     }
   ]
 }
