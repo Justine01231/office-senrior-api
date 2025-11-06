@@ -10,6 +10,9 @@ export interface User {
   assignedBy?: number | null;
   isActive: boolean | null;
   emailVerified: boolean | null;
+  approvalStatus?: string | null;
+  hasAssignment?: boolean; // NEW: Indicates if senior has staff assignment
+  assignedStaffId?: number | null; // NEW: The staff ID assigned to a senior user
   createdAt: Date | null;
   updatedAt: Date | null;
 }

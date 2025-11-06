@@ -54,11 +54,22 @@ export const usersRoutes = new Elysia({ prefix: '/api/users' })
     
     const userProfile = await db.select({
       id: users.id,
+      username: users.username,
       email: users.email,
       firstName: users.firstName,
       lastName: users.lastName,
+      phone: users.phone,
+      address: users.address,
+      dateOfBirth: users.dateOfBirth,
+      emergencyContactName: users.emergencyContactName,
+      emergencyContactPhone: users.emergencyContactPhone,
+      socialSecurity: users.socialSecurity,
       role: users.role,
-      createdAt: users.createdAt
+      isActive: users.isActive,
+      profileCompleted: users.profileCompleted,
+      approvalStatus: users.approvalStatus,
+      createdAt: users.createdAt,
+      updatedAt: users.updatedAt
     })
     .from(users)
     .where(eq(users.id, user.userId))
@@ -198,4 +209,167 @@ export const usersRoutes = new Elysia({ prefix: '/api/users' })
       currentPassword: t.String({ minLength: 1 }),
       newPassword: t.String({ minLength: 6 })
     })
+  })
+  
+  // GET user statistics (Admin only)
+  .get('/statistics', async (context: any) => {
+    try {
+      const { user, set } = context;
+      
+      if (!user) {
+        set.status = 401;
+        return {
+          success: false,
+          message: 'Authentication required'
+        };
+      }
+      
+      // Check if user is admin
+      if (user.role !== 'admin') {
+        set.status = 403;
+        return {
+          success: false,
+          message: 'Admin access required'
+        };
+      }
+      
+      // Get all users and count by role
+      const allUsers = await db.select({
+        role: users.role
+      }).from(users);
+      
+      let totalUsers = allUsers.length;
+      let adminCount = 0;
+      let staffCount = 0;
+      let seniorCount = 0;
+      
+      allUsers.forEach(user => {
+        switch (user.role) {
+          case 'admin':
+            adminCount++;
+            break;
+          case 'staff':
+            staffCount++;
+            break;
+          case 'senior':
+            seniorCount++;
+            break;
+        }
+      });
+      
+      return {
+        success: true,
+        data: {
+          totalUsers,
+          adminCount,
+          staffCount,
+          seniorCount
+        }
+      };
+      
+    } catch (error: any) {
+      console.error('Statistics error:', error);
+      context.set.status = 500;
+      return {
+        success: false,
+        message: error?.message || 'Failed to get statistics'
+      };
+    }
+  })
+  
+  // Complete user profile (for seniors after registration)
+  .put('/complete-profile', async (context: any) => {
+    try {
+      const { user, body, set } = context;
+      
+      if (!user) {
+        set.status = 401;
+        return {
+          success: false,
+          message: 'Authentication required'
+        };
+      }
+      
+      // Only seniors can complete profile
+      if (user.role !== 'senior') {
+        set.status = 403;
+        return {
+          success: false,
+          message: 'Profile completion is only for senior users'
+        };
+      }
+      
+      const {
+        phone,
+        address,
+        dateOfBirth,
+        emergencyContactName,
+        emergencyContactPhone,
+        socialSecurity // optional
+      } = body;
+      
+      // Validate required fields
+      if (!phone || !address || !dateOfBirth || !emergencyContactName || !emergencyContactPhone) {
+        set.status = 400;
+        return {
+          success: false,
+          message: 'Phone, address, date of birth, and emergency contact information are required'
+        };
+      }
+      
+      console.log(`🔄 COMPLETING PROFILE for user ID: ${user.userId}`);
+      
+      // Update user profile
+      const [updatedUser] = await db.update(users)
+        .set({
+          phone,
+          address,
+          dateOfBirth,
+          emergencyContactName,
+          emergencyContactPhone,
+          socialSecurity: socialSecurity || null,
+          profileCompleted: true,
+          updatedAt: new Date()
+        })
+        .where(eq(users.id, user.userId))
+        .returning({
+          id: users.id,
+          username: users.username,
+          firstName: users.firstName,
+          lastName: users.lastName,
+          email: users.email,
+          phone: users.phone,
+          address: users.address,
+          dateOfBirth: users.dateOfBirth,
+          emergencyContactName: users.emergencyContactName,
+          emergencyContactPhone: users.emergencyContactPhone,
+          socialSecurity: users.socialSecurity,
+          role: users.role,
+          isActive: users.isActive,
+          profileCompleted: users.profileCompleted,
+          approvalStatus: users.approvalStatus,
+          createdAt: users.createdAt,
+          updatedAt: users.updatedAt
+        });
+      
+      if (!updatedUser) {
+        throw new Error('Failed to update profile');
+      }
+      
+      console.log(`✅ Profile completed for user: ${updatedUser.firstName} ${updatedUser.lastName}`);
+      
+      return {
+        success: true,
+        message: 'Profile completed successfully! Your application is now pending admin approval.',
+        data: updatedUser
+      };
+      
+    } catch (error: any) {
+      console.error('Profile completion error:', error);
+      context.set.status = 500;
+      return {
+        success: false,
+        message: error?.message || 'Failed to complete profile'
+      };
+    }
   });

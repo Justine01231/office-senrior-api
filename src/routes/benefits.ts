@@ -3,17 +3,21 @@ import { Elysia, t } from 'elysia';
 import { db } from '../db';
 import { benefits } from '../db/schema';
 import { eq } from 'drizzle-orm';
+import { authMiddleware } from '../middleware/auth';
+import { requireModuleAccess } from '../middleware/module-access';
 
 export const benefitsRoutes = new Elysia({ prefix: '/api/benefits' })
+  .use(authMiddleware)
+  .use(requireModuleAccess)
 
   .get('/', async () => {
-  const allBenefits = await db.select().from(benefits);
-  return {
-    success: true,
-    data: allBenefits,
-    count: allBenefits.length
-  };
-})
+    const allBenefits = await db.select().from(benefits);
+    return {
+      success: true,
+      data: allBenefits,
+      count: allBenefits.length
+    };
+  })
   
   .get('/senior/:seniorId', async ({ params }) => {
     const seniorBenefits = await db.select()

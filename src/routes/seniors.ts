@@ -2,15 +2,45 @@
 import { Elysia, t } from 'elysia';
 import { db } from '../db';
 import { seniors, users } from '../db/schema';
-import { eq } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 // import { authMiddleware } from '../middleware/auth';
+
+console.log('🔥 SENIORS ROUTES LOADED - NEW CODE IS RUNNING!');
 
 export const seniorsRoutes = new Elysia({ prefix: '/api/seniors' })
   // .use(authMiddleware)
+  .onRequest((context) => {
+    // Only log requests that actually match this route prefix
+    if (context.request.url.includes('/api/seniors')) {
+      console.log(`📥 SENIORS ROUTE REQUEST: ${context.request.method} ${context.request.url}`);
+    }
+  })
   
-  // GET all seniors
+  // GET all seniors (users with role="senior" AND approved status)
   .get('/', async () => {
-    const allSeniors = await db.select().from(seniors);
+    console.log('📋 Getting all APPROVED seniors only');
+    const allSeniors = await db.select({
+      id: users.id,
+      firstName: users.firstName,
+      lastName: users.lastName,
+      username: users.username,
+      email: users.email,
+      phone: users.phone,
+      address: users.address,
+      dateOfBirth: users.dateOfBirth,
+      gender: users.gender,
+      emergencyContactName: users.emergencyContactName,
+      emergencyContactPhone: users.emergencyContactPhone,
+      approvalStatus: users.approvalStatus,
+      isActive: users.isActive,
+      createdAt: users.createdAt,
+      updatedAt: users.updatedAt
+    })
+    .from(users)
+    .where(and(eq(users.role, 'senior'), eq(users.approvalStatus, 'approved')));
+    
+    console.log(`✅ Found ${allSeniors.length} approved seniors`);
+    
     return {
       success: true,
       data: allSeniors,
@@ -20,9 +50,17 @@ export const seniorsRoutes = new Elysia({ prefix: '/api/seniors' })
   
   // GET senior by ID
   .get('/:id', async ({ params }) => {
-    const senior = await db.select()
-      .from(seniors)
-      .where(eq(seniors.id, parseInt(params.id)))
+    const senior = await db.select({
+      id: users.id,
+      firstName: users.firstName,
+      lastName: users.lastName,
+      username: users.username,
+      email: users.email,
+      createdAt: users.createdAt,
+      updatedAt: users.updatedAt
+    })
+      .from(users)
+      .where(eq(users.id, parseInt(params.id)))
       .limit(1);
     
     if (!senior.length) {
@@ -36,78 +74,268 @@ export const seniorsRoutes = new Elysia({ prefix: '/api/seniors' })
     })
   })
   
-  // POST - Create new senior
+  // UPDATE senior by ID
+  .put('/:id', async ({ params, body }) => {
+    const { firstName, lastName, username, email } = body;
+    const inputId = parseInt(params.id);
+    console.log(`🔄 UPDATING SENIOR: ID=${inputId}, data:`, body);
+    
+    // First, try to find by Senior ID
+    let seniorRecord = await db.select({
+      userId: seniors.userId
+    })
+      .from(seniors)
+      .where(eq(seniors.id, inputId))
+      .limit(1);
+    
+    // If not found by Senior ID, try by User ID
+    if (!seniorRecord || seniorRecord.length === 0) {
+      seniorRecord = await db.select({
+        userId: seniors.userId
+      })
+        .from(seniors)
+        .where(eq(seniors.userId, inputId))
+        .limit(1);
+    }
+    
+    console.log(`📋 Senior record found:`, seniorRecord);
+    
+    if (!seniorRecord || seniorRecord.length === 0) {
+      throw new Error('Senior not found');
+    }
+    
+    const userId = seniorRecord[0]!.userId;
+    if (!userId) {
+      throw new Error('Senior user ID not found');
+    }
+    console.log(`🔄 Updating user ID: ${userId} with data:`, body);
+    
+    // Update the user record (where the actual data is stored)
+    const [updatedUser] = await db.update(users)
+      .set({
+        firstName,
+        lastName,
+        username,
+        email,
+        updatedAt: new Date()
+      })
+      .where(eq(users.id, userId))
+      .returning({
+        id: users.id,
+        firstName: users.firstName,
+        lastName: users.lastName,
+        username: users.username,
+        email: users.email,
+        isActive: users.isActive,
+        createdAt: users.createdAt,
+        updatedAt: users.updatedAt
+      });
+    
+    if (!updatedUser) {
+      throw new Error('Senior not found or update failed');
+    }
+    
+    // Also update the seniors table timestamp
+    await db.update(seniors)
+      .set({
+        updatedAt: new Date()
+      })
+      .where(eq(seniors.id, parseInt(params.id)));
+    
+    console.log(`✅ Senior updated successfully:`, updatedUser);
+    
+    return { 
+      success: true, 
+      message: 'Senior updated successfully',
+      data: {
+        id: parseInt(params.id), // Return the senior ID, not user ID
+        userId: userId,
+        notes: null,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      }
+    };
+  }, {
+    params: t.Object({
+      id: t.String()
+    }),
+    body: t.Object({
+      firstName: t.String(),
+      lastName: t.String(),
+      username: t.String(),
+      email: t.Optional(t.String())
+    })
+  })
+  
+  // UPDATE senior status (activate/deactivate)
+  .patch('/:id/status', async ({ params, body }) => {
+    const { isActive } = body;
+    const inputId = parseInt(params.id);
+    console.log(`🔄 UPDATING SENIOR STATUS: ID=${inputId}, isActive=${isActive}`);
+    
+    // First, try to find by Senior ID
+    let seniorRecord = await db.select({
+      userId: seniors.userId
+    })
+      .from(seniors)
+      .where(eq(seniors.id, inputId))
+      .limit(1);
+    
+    // If not found by Senior ID, try by User ID
+    if (!seniorRecord || seniorRecord.length === 0) {
+      seniorRecord = await db.select({
+        userId: seniors.userId
+      })
+        .from(seniors)
+        .where(eq(seniors.userId, inputId))
+        .limit(1);
+    }
+    
+    const userId = seniorRecord[0]!.userId;
+    if (!userId) {
+      throw new Error('Senior user ID not found');
+    }
+    console.log(`🔄 Updating user ID: ${userId} to isActive: ${isActive}`);
+    
+    // Update the user's isActive status
+    const [updatedSenior] = await db.update(users)
+      .set({
+        isActive,
+        updatedAt: new Date()
+      })
+      .where(eq(users.id, userId))
+      .returning({
+        id: users.id,
+        firstName: users.firstName,
+        lastName: users.lastName,
+        username: users.username,
+        email: users.email,
+        isActive: users.isActive,
+        createdAt: users.createdAt,
+        updatedAt: users.updatedAt
+      });
+    
+    if (!updatedSenior) {
+      throw new Error('Senior not found or status update failed');
+    }
+    
+    return { 
+      success: true, 
+      message: `Senior ${isActive ? 'activated' : 'deactivated'} successfully`,
+      data: updatedSenior 
+    };
+  }, {
+    params: t.Object({
+      id: t.String()
+    }),
+    body: t.Object({
+      isActive: t.Boolean()
+    })
+  })
+  
+  // DELETE senior by ID (handles both Senior ID and User ID)
+  .delete('/:id', async ({ params }) => {
+    const inputId = parseInt(params.id);
+    console.log(`🗑️ DELETE SENIOR REQUEST: ID=${inputId}`);
+    
+    try {
+      // First, try to find by Senior ID
+      let seniorRecord = await db.select({
+        seniorId: seniors.id,
+        userId: seniors.userId,
+        firstName: users.firstName,
+        lastName: users.lastName
+      })
+        .from(seniors)
+        .innerJoin(users, eq(seniors.userId, users.id))
+        .where(eq(seniors.id, inputId))
+        .limit(1);
+      
+      // If not found by Senior ID, try by User ID
+      if (!seniorRecord || seniorRecord.length === 0) {
+        console.log(`🔍 Not found by Senior ID, trying User ID=${inputId}`);
+        seniorRecord = await db.select({
+          seniorId: seniors.id,
+          userId: seniors.userId,
+          firstName: users.firstName,
+          lastName: users.lastName
+        })
+          .from(seniors)
+          .innerJoin(users, eq(seniors.userId, users.id))
+          .where(eq(users.id, inputId))
+          .limit(1);
+      }
+      
+      console.log(`📋 Senior record found:`, seniorRecord);
+      
+      if (!seniorRecord || seniorRecord.length === 0) {
+        throw new Error('senior not found');
+      }
+      
+      const seniorData = seniorRecord[0]!;
+      const actualUserId = seniorData.userId;
+      const seniorId = seniorData.seniorId;
+      
+      if (!actualUserId) {
+        throw new Error('Senior user ID not found');
+      }
+      
+      console.log(`🔄 Deleting User ID: ${actualUserId}, Senior ID: ${seniorId} for senior: ${seniorData.firstName} ${seniorData.lastName}`);
+      
+      // Delete the senior record first
+      await db.delete(seniors).where(eq(seniors.id, seniorId));
+      
+      // Then delete the user record
+      const [deletedUser] = await db.delete(users)
+        .where(eq(users.id, actualUserId))
+        .returning({
+          id: users.id,
+          firstName: users.firstName,
+          lastName: users.lastName,
+          username: users.username
+        });
+      
+      console.log(`✅ Deleted senior:`, deletedUser);
+      
+      if (!deletedUser) {
+        console.log(`❌ No user was deleted for ID: ${actualUserId}`);
+        throw new Error('Senior not found or deletion failed');
+      }
+      
+      return { 
+        success: true, 
+        message: 'Senior deleted successfully',
+        data: deletedUser 
+      };
+    } catch (error) {
+      console.error(`❌ Delete error:`, error);
+      throw error;
+    }
+  }, {
+    params: t.Object({
+      id: t.String()
+    })
+  })
+  
+  // POST - Create new senior record (only creates seniors table entry)
   .post('/', async ({ body }) => {
+    const { userId, notes } = body;
+    
     const newSenior = await db.insert(seniors)
-      .values(body)
+      .values({
+        userId,
+        notes: notes || null
+      })
       .returning();
     
     return {
       success: true,
-      message: 'Senior created successfully',
+      message: 'Senior record created successfully',
       data: newSenior[0]
     };
   }, {
     body: t.Object({
-      firstName: t.String({ minLength: 1 }),
-      lastName: t.String({ minLength: 1 }),
-      phone: t.Optional(t.String()),
-      address: t.Optional(t.String()),
-      dateOfBirth: t.String(),
-      socialSecurity: t.Optional(t.String()),
-      emergencyContactName: t.Optional(t.String()),
-      emergencyContactPhone: t.Optional(t.String()),
-      notes: t.Optional(t.String()),
-      status: t.Optional(t.String())
-    })
-  })
-  
-  // PUT - Update senior
-  .put('/:id', async ({ params, body }) => {
-    const updated = await db.update(seniors)
-      .set({ ...body, updatedAt: new Date() })
-      .where(eq(seniors.id, parseInt(params.id)))
-      .returning();
-    
-    if (!updated.length) {
-      throw new Error('Senior not found');
-    }
-    
-    return {
-      success: true,
-      message: 'Senior updated successfully',
-      data: updated[0]
-    };
-  }, {
-    params: t.Object({ id: t.String() }),
-    body: t.Object({
-      firstName: t.Optional(t.String()),
-      lastName: t.Optional(t.String()),
-      phone: t.Optional(t.String()),
-      address: t.Optional(t.String()),
-      dateOfBirth: t.Optional(t.String()),
-      socialSecurity: t.Optional(t.String()),
-      emergencyContactName: t.Optional(t.String()),
-      emergencyContactPhone: t.Optional(t.String()),
-      status: t.Optional(t.String()),
+      userId: t.Number(),
       notes: t.Optional(t.String())
     })
   })
-  
-  // DELETE senior
-  .delete('/:id', async ({ params }) => {
-    const deleted = await db.delete(seniors)
-      .where(eq(seniors.id, parseInt(params.id)))
-      .returning();
-    
-    if (!deleted.length) {
-      throw new Error('Senior not found');
-    }
-    
-    return {
-      success: true,
-      message: 'Senior deleted successfully'
-    };
-  }, {
-    params: t.Object({ id: t.String() })
-  });

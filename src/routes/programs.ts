@@ -3,8 +3,12 @@ import { Elysia, t } from 'elysia';
 import { db } from '../db';
 import { programs } from '../db/schema';
 import { eq } from 'drizzle-orm';
+import { authMiddleware } from '../middleware/auth';
+import { requireModuleAccess } from '../middleware/module-access';
 
 export const programsRoutes = new Elysia({ prefix: '/api/programs' })
+  .use(authMiddleware)
+  .use(requireModuleAccess)
   
   .get('/', async () => {
     const allPrograms = await db.select().from(programs);

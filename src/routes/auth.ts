@@ -2,11 +2,17 @@
 import { Elysia, t } from 'elysia';
 import { AuthService } from '../services/auth';
 import * as jwt from 'jsonwebtoken';
+import { randomUUID } from 'crypto';
 import type { LoginRequest, RegisterRequest, RefreshTokenRequest, AuthResponse } from '../types/auth';
-
-const JWT_SECRET = process.env.JWT_SECRET || 'office-seniors-super-secret-jwt-key-2024-change-this-in-production';
+import { Environment } from '../config/environment';
+import { ValidationSchemas, ValidationUtils } from '../utils/validation';
+import { authRateLimit } from '../middleware/rateLimiter';
 
 export const authRoutes = new Elysia({ prefix: '/auth' })
+  .use(authRateLimit)
+  .onRequest((context) => {
+    console.log(`🔐 AUTH ROUTE REQUEST: ${context.request.method} ${context.request.url}`);
+  })
   
   // Register endpoint
   .post('/register', async ({ body, set }) => {
@@ -52,8 +58,8 @@ export const authRoutes = new Elysia({ prefix: '/auth' })
 
       // Generate tokens
       const jwtPayload = await AuthService.generateJWTPayload(user);
-      const accessToken = jwt.sign(jwtPayload, JWT_SECRET);
-      const refreshToken = crypto.randomUUID();
+      const accessToken = jwt.sign(jwtPayload, Environment.JWT_SECRET);
+      const refreshToken = randomUUID();
 
       // Store refresh token
       const refreshExpiry = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
@@ -96,7 +102,9 @@ export const authRoutes = new Elysia({ prefix: '/auth' })
   // Login endpoint
   .post('/login', async ({ body, set }) => {
     try {
+      console.log('🔐 Login attempt started');
       const { username, password } = body as LoginRequest;
+      console.log('🔐 Login for username:', username);
 
       // Validate input
       if (!username || !password) {
@@ -108,32 +116,37 @@ export const authRoutes = new Elysia({ prefix: '/auth' })
       }
 
       // Find user
+      console.log('🔐 Looking up user in database...');
       const userWithPassword = await AuthService.findUserByUsername(username);
+      console.log('🔐 User lookup result:', userWithPassword ? 'Found' : 'Not found');
       if (!userWithPassword) {
         set.status = 401;
         return {
           success: false,
-          message: 'Invalid credentials'
+          message: 'Invalid username or password'
         } as AuthResponse;
       }
 
-      // Verify password
-      const isPasswordValid = await AuthService.verifyPassword(password, userWithPassword.passwordHash);
-      if (!isPasswordValid) {
-        set.status = 401;
-        return {
-          success: false,
-          message: 'Invalid credentials'
-        } as AuthResponse;
-      }
-
-      // Check if user is active
+      // Check user status (especially for seniors)
       if (!userWithPassword.isActive) {
-        set.status = 401;
-        return {
-          success: false,
-          message: 'Account is deactivated'
-        } as AuthResponse;
+        // Allow pending seniors to login so they can complete their profile
+        if (userWithPassword.role === 'senior' && userWithPassword.approvalStatus === 'pending') {
+          console.log('🔓 Allowing pending senior to login for profile completion:', userWithPassword.username);
+          // Continue with login process - don't block pending seniors
+        } else if (userWithPassword.role === 'senior' && userWithPassword.approvalStatus === 'rejected') {
+          set.status = 403;
+          return {
+            success: false,
+            message: 'Your registration has been declined. Please contact the Office of Seniors for assistance.'
+          } as AuthResponse;
+        } else {
+          // Default deactivated message for other cases (staff, admin, etc.)
+          set.status = 403;
+          return {
+            success: false,
+            message: 'Account has been deactivated. Please contact support for assistance.'
+          } as AuthResponse;
+        }
       }
 
       // Remove password from user object
@@ -141,8 +154,8 @@ export const authRoutes = new Elysia({ prefix: '/auth' })
 
       // Generate tokens
       const jwtPayload = await AuthService.generateJWTPayload(user);
-      const accessToken = jwt.sign(jwtPayload, JWT_SECRET);
-      const refreshToken = crypto.randomUUID();
+      const accessToken = jwt.sign(jwtPayload, Environment.JWT_SECRET);
+      const refreshToken = randomUUID();
 
       // Store refresh token
       const refreshExpiry = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
@@ -209,8 +222,8 @@ export const authRoutes = new Elysia({ prefix: '/auth' })
 
       // Generate new tokens
       const jwtPayload = await AuthService.generateJWTPayload(user);
-      const accessToken = jwt.sign(jwtPayload, JWT_SECRET);
-      const newRefreshToken = crypto.randomUUID();
+      const accessToken = jwt.sign(jwtPayload, Environment.JWT_SECRET);
+      const newRefreshToken = randomUUID();
 
       // Remove old refresh token and store new one
       await AuthService.removeRefreshToken(refreshToken);
@@ -293,7 +306,7 @@ export const authRoutes = new Elysia({ prefix: '/auth' })
       
       let payload;
       try {
-        payload = jwt.verify(token, JWT_SECRET) as any;
+        payload = jwt.verify(token, Environment.JWT_SECRET) as any;
       } catch (error) {
         set.status = 401;
         return {

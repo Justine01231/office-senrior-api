@@ -31,7 +31,10 @@ export const staffRoutes = new Elysia({ prefix: '/staff' })
     
     try {
       // Check if username already exists
-      const existingUser = await db.select()
+      const existingUser = await db.select({
+        id: users.id,
+        username: users.username
+      })
         .from(users)
         .where(eq(users.username, body.username))
         .limit(1);
@@ -54,6 +57,7 @@ export const staffRoutes = new Elysia({ prefix: '/staff' })
         role: 'staff',
         firstName: body.firstName,
         lastName: body.lastName,
+        position: body.position,
         assignedBy: user.id,
         isActive: true,
         emailVerified: false,
@@ -66,6 +70,7 @@ export const staffRoutes = new Elysia({ prefix: '/staff' })
         role: users.role,
         firstName: users.firstName,
         lastName: users.lastName,
+        position: users.position,
         createdAt: users.createdAt
       });
       
@@ -88,7 +93,8 @@ export const staffRoutes = new Elysia({ prefix: '/staff' })
       email: t.Optional(t.String({ format: 'email' })),
       password: t.String({ minLength: 6 }),
       firstName: t.String({ minLength: 1, maxLength: 100 }),
-      lastName: t.String({ minLength: 1, maxLength: 100 })
+      lastName: t.String({ minLength: 1, maxLength: 100 }),
+      position: t.String({ minLength: 1, maxLength: 100 })
     })
   })
   
@@ -106,6 +112,8 @@ export const staffRoutes = new Elysia({ prefix: '/staff' })
         email: users.email,
         firstName: users.firstName,
         lastName: users.lastName,
+        role: users.role,
+        position: users.position,
         isActive: users.isActive,
         createdAt: users.createdAt
       })
@@ -218,5 +226,76 @@ export const staffRoutes = new Elysia({ prefix: '/staff' })
   }, {
     body: t.Object({
       isActive: t.Boolean()
+    })
+  })
+  
+  // DELETE staff member by ID (Admin only)
+  .delete('/:id', async ({ params, user }) => {
+    // Check if user is admin
+    if (user.role !== 'admin') {
+      throw new Error('Only admins can delete staff accounts');
+    }
+    
+    try {
+      console.log(`🚀 DELETE STAFF ENDPOINT HIT! ID: ${params.id}`);
+      
+      const staffId = parseInt(params.id);
+      
+      // First, check if staff exists with role="staff" - only select staff-relevant fields
+      const existingStaff = await db.select({
+        id: users.id,
+        username: users.username,
+        email: users.email,
+        firstName: users.firstName,
+        lastName: users.lastName,
+        role: users.role,
+        position: users.position,
+        isActive: users.isActive,
+        createdAt: users.createdAt
+      }).from(users).where(and(
+        eq(users.id, staffId),
+        eq(users.role, 'staff')
+      ));
+      
+      console.log(`🚀 Found staff:`, existingStaff);
+      
+      if (!existingStaff.length) {
+        console.log(`❌ No staff found with ID: ${staffId}`);
+        throw new Error('Staff member not found');
+      }
+      
+      // Delete any staff assignments first
+      await db.delete(staffAssignments)
+        .where(eq(staffAssignments.staffId, staffId));
+      
+      // Delete the staff user
+      const [deletedStaff] = await db.delete(users)
+        .where(eq(users.id, staffId))
+        .returning({
+          id: users.id,
+          firstName: users.firstName,
+          lastName: users.lastName,
+          username: users.username
+        });
+      
+      console.log(`✅ Deleted staff:`, deletedStaff);
+      
+      if (!deletedStaff) {
+        console.log(`❌ No staff was deleted for ID: ${staffId}`);
+        throw new Error('Staff member not found or deletion failed');
+      }
+      
+      return { 
+        success: true, 
+        message: 'Staff member deleted successfully',
+        data: deletedStaff 
+      };
+    } catch (error) {
+      console.error(`❌ Delete staff error:`, error);
+      throw error;
+    }
+  }, {
+    params: t.Object({
+      id: t.String()
     })
   });
