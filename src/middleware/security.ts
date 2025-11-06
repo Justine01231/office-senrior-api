@@ -37,14 +37,7 @@ export const securityMiddleware = new Elysia()
 
 // CORS configuration with security considerations
 export const corsConfig = {
-  origin: (origin: string | undefined): boolean => {
-    // Allow requests with no origin (mobile apps, Postman, etc.)
-    if (!origin) return true;
-    
-    // Check against allowed origins
-    return Environment.ALLOWED_ORIGINS.includes(origin) || 
-           Environment.NODE_ENV === 'development';
-  },
+  origin: true, // Allow all origins for now - can be restricted later
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: [
@@ -61,7 +54,7 @@ export const corsConfig = {
     'X-RateLimit-Reset'
   ],
   maxAge: 86400 // 24 hours
-} as const;
+};
 
 // Input sanitization middleware
 export const sanitizationMiddleware = new Elysia()
