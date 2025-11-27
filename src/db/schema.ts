@@ -25,7 +25,7 @@ export const users = pgTable('users', {
   photoPath: varchar('photo_path', { length: 255 }),
   
   // Staff-specific fields
-  position: varchar('position', { length: 100 }), // Staff position: Case Worker, Program Coordinator, etc.
+  position: varchar('position', { length: 100 }), // Staff position: Senior Care Coordinator, Program Coordinator, etc.
   assignedBy: integer('assigned_by'), // For staff created by admin - references users.id
   
   // Status & Completion tracking
@@ -206,6 +206,99 @@ export const reactivationRequests = pgTable('reactivation_requests', {
   reviewedAt: timestamp('reviewed_at'),
   reviewNotes: text('review_notes'), // Admin's notes on decision
   requestedAt: timestamp('requested_at').defaultNow(),
+});
+
+// APPOINTMENTS TABLE
+export const appointments = pgTable('appointments', {
+  id: serial('id').primaryKey(),
+  seniorId: integer('senior_id').references(() => users.id, { onDelete: 'cascade' }).notNull(),
+  staffId: integer('staff_id').references(() => users.id, { onDelete: 'set null' }), // Staff who created/manages appointment
+  
+  // Appointment Details
+  title: varchar('title', { length: 200 }).notNull(),
+  type: varchar('type', { length: 100 }).notNull(), // medical, consultation, follow-up, wellness-check, etc.
+  description: text('description'),
+  
+  // Scheduling
+  appointmentDate: date('appointment_date').notNull(),
+  appointmentTime: varchar('appointment_time', { length: 10 }).notNull(), // HH:MM format
+  duration: integer('duration').default(30), // Duration in minutes
+  
+  // Location & Contact
+  location: varchar('location', { length: 300 }),
+  doctorName: varchar('doctor_name', { length: 200 }),
+  contactPhone: varchar('contact_phone', { length: 20 }),
+  
+  // Status & Notes
+  status: varchar('status', { length: 20 }).default('scheduled'), // scheduled, completed, cancelled, rescheduled, no-show
+  notes: text('notes'), // Additional notes
+  reminderSent: boolean('reminder_sent').default(false),
+  
+  // Tracking
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+});
+
+// BENEFIT APPLICATIONS TABLE - For tracking application workflow
+export const benefitApplications = pgTable('benefit_applications', {
+  id: serial('id').primaryKey(),
+  seniorId: integer('senior_id').references(() => users.id, { onDelete: 'cascade' }).notNull(),
+  applicationType: varchar('application_type', { length: 100 }).notNull(), // SNAP, Medicare, Housing, etc.
+  applicationDate: date('application_date').notNull(),
+  status: varchar('status', { length: 50 }).default('pending'), // pending, under_review, approved, rejected
+  statusUpdatedAt: timestamp('status_updated_at').defaultNow(),
+  statusUpdatedBy: integer('status_updated_by').references(() => users.id), // Staff who updated status
+  statusReason: text('status_reason'), // Reason for status change
+  
+  // Application details
+  priority: varchar('priority', { length: 20 }).default('medium'), // low, medium, high, urgent
+  estimatedAmount: varchar('estimated_amount', { length: 50 }),
+  notes: text('notes'),
+  
+  // Tracking
+  assignedTo: integer('assigned_to').references(() => users.id), // Benefits Specialist assigned
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+});
+
+// APPLICATION STATUS HISTORY TABLE - Track all status changes
+export const applicationStatusHistory = pgTable('application_status_history', {
+  id: serial('id').primaryKey(),
+  applicationId: integer('application_id').references(() => benefitApplications.id, { onDelete: 'cascade' }).notNull(),
+  previousStatus: varchar('previous_status', { length: 50 }),
+  newStatus: varchar('new_status', { length: 50 }).notNull(),
+  reason: text('reason'),
+  updatedBy: integer('updated_by').references(() => users.id).notNull(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+});
+
+// DOCUMENTS TABLE - For document management
+export const documents = pgTable('documents', {
+  id: serial('id').primaryKey(),
+  applicationId: integer('application_id').references(() => benefitApplications.id, { onDelete: 'cascade' }),
+  seniorId: integer('senior_id').references(() => users.id, { onDelete: 'cascade' }).notNull(),
+  
+  // Document details
+  name: varchar('name', { length: 200 }).notNull(),
+  description: text('description'),
+  documentType: varchar('document_type', { length: 100 }).notNull(), // ID, Income_Proof, Medical_Records, etc.
+  status: varchar('status', { length: 50 }).default('required'), // required, submitted, approved, rejected
+  
+  // File information
+  fileName: varchar('file_name', { length: 255 }),
+  filePath: varchar('file_path', { length: 500 }),
+  fileSize: integer('file_size'), // in bytes
+  mimeType: varchar('mime_type', { length: 100 }),
+  
+  // Upload tracking
+  uploadedBy: integer('uploaded_by').references(() => users.id),
+  uploadedAt: timestamp('uploaded_at'),
+  reviewedBy: integer('reviewed_by').references(() => users.id),
+  reviewedAt: timestamp('reviewed_at'),
+  reviewNotes: text('review_notes'),
+  
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
 });
 
 // USER AUDIT LOG TABLE

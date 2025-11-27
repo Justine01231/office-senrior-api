@@ -1,8 +1,12 @@
 // src/middleware/auth.ts
 import { Elysia } from 'elysia';
 import * as jwt from 'jsonwebtoken';
+import { Environment } from '../config/environment';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'office-seniors-super-secret-jwt-key-2024-change-this-in-production';
+// Use the same JWT secret as the auth routes to keep token signing and
+// verification in sync. Environment.JWT_SECRET already validates presence
+// and minimum length, so we don't fall back to a different hardcoded key.
+const JWT_SECRET = Environment.JWT_SECRET;
 
 export const authMiddleware = new Elysia()
   .derive(({ headers }) => {

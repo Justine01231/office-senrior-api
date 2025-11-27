@@ -99,8 +99,8 @@ function getModuleAccessByPosition(module: string, staffPosition: string): {allo
   // Module access based on staff position
   switch (module) {
     case 'health':
-      // Health module accessible to Health Coordinators, Doctors, Nurses
-      const healthPositions = ['Health Coordinator', 'Doctor', 'Nurse', 'Medical Assistant'];
+      // Health module accessible to Senior Care Coordinators, Doctors, Nurses
+      const healthPositions = ['Senior Care Coordinator', 'Doctor', 'Nurse', 'Medical Assistant'];
       const hasHealthAccess = healthPositions.some(pos => 
         staffPosition.toLowerCase().includes(pos.toLowerCase())
       );
@@ -110,8 +110,8 @@ function getModuleAccessByPosition(module: string, staffPosition: string): {allo
       };
 
     case 'benefits':
-      // Benefits module accessible to Social Workers, Benefits Coordinators
-      const benefitsPositions = ['Social Worker', 'Benefits Coordinator', 'Case Manager'];
+      // Benefits module accessible to Senior Care Coordinators, Social Workers, Benefits Coordinators
+      const benefitsPositions = ['Senior Care Coordinator', 'Social Worker', 'Benefits Coordinator', 'Case Manager'];
       const hasBenefitsAccess = benefitsPositions.some(pos => 
         staffPosition.toLowerCase().includes(pos.toLowerCase())
       );
@@ -132,8 +132,8 @@ function getModuleAccessByPosition(module: string, staffPosition: string): {allo
       };
 
     case 'contacts':
-      // Contacts module accessible to Social Workers, Case Managers
-      const contactsPositions = ['Social Worker', 'Case Manager', 'Family Liaison'];
+      // Contacts module accessible to Senior Care Coordinators, Social Workers, Case Managers
+      const contactsPositions = ['Senior Care Coordinator', 'Social Worker', 'Case Manager', 'Family Liaison'];
       const hasContactsAccess = contactsPositions.some(pos => 
         staffPosition.toLowerCase().includes(pos.toLowerCase())
       );

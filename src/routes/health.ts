@@ -29,6 +29,7 @@ function filterHealthRecordFields(record: any) {
       if (record.frequency) medicationFields.frequency = record.frequency;
       if (record.refillDate) medicationFields.refillDate = record.refillDate;
       if (record.reminderTime) medicationFields.reminderTime = record.reminderTime;
+      if (record.notes) medicationFields.notes = record.notes;
       return medicationFields;
 
     case 'appointment':
@@ -37,6 +38,8 @@ function filterHealthRecordFields(record: any) {
       if (record.location) appointmentFields.location = record.location;
       if (record.appointmentDate) appointmentFields.appointmentDate = record.appointmentDate;
       if (record.dateTime) appointmentFields.dateTime = record.dateTime;
+      if (record.notes) appointmentFields.notes = record.notes;
+      if (record.description) appointmentFields.description = record.description;
       return appointmentFields;
 
     case 'condition':
@@ -95,15 +98,12 @@ function filterHealthRecordFields(record: any) {
       if (record.therapist) exerciseFields.therapist = record.therapist;
       if (record.sessionDate) exerciseFields.sessionDate = record.sessionDate;
       if (record.notes) exerciseFields.notes = record.notes;
-      // Include recurrence fields only if they have values
-      if (record.isRecurring) {
-        exerciseFields.isRecurring = record.isRecurring;
-        if (record.recurrencePattern) exerciseFields.recurrencePattern = record.recurrencePattern;
-        if (record.recurrenceTime) exerciseFields.recurrenceTime = record.recurrenceTime;
-        if (record.startDate) exerciseFields.startDate = record.startDate;
-        if (record.endDate) exerciseFields.endDate = record.endDate;
-        if (record.recurrenceDays) exerciseFields.recurrenceDays = record.recurrenceDays;
-      }
+      // Include recurrence fields if they have values (regardless of isRecurring flag)
+      if (record.recurrencePattern) exerciseFields.recurrencePattern = record.recurrencePattern;
+      if (record.recurrenceTime) exerciseFields.recurrenceTime = record.recurrenceTime;
+      if (record.startDate) exerciseFields.startDate = record.startDate;
+      if (record.endDate) exerciseFields.endDate = record.endDate;
+      if (record.recurrenceDays) exerciseFields.recurrenceDays = record.recurrenceDays;
       return exerciseFields;
 
     default:
@@ -431,6 +431,17 @@ export const healthRoutes = new Elysia({ prefix: '/api/health' })
       }
       
       console.log(`✅ Health record found: ${healthRecord.title}`);
+      console.log(`🔍 Health record fields for editing:`, {
+        id: healthRecord.id,
+        type: healthRecord.type,
+        title: healthRecord.title,
+        medicineName: healthRecord.medicineName,
+        dosage: healthRecord.dosage,
+        frequency: healthRecord.frequency,
+        reminderTime: healthRecord.reminderTime,
+        notes: healthRecord.notes,
+        refillDate: healthRecord.refillDate
+      });
       
       return {
         success: true,
@@ -512,18 +523,54 @@ export const healthRoutes = new Elysia({ prefix: '/api/health' })
           recordData.medicineName = body.medicineName;
           recordData.dosage = body.dosage;
           recordData.frequency = body.frequency;
-          recordData.refillDate = body.refillDate ? new Date(body.refillDate) : null;
+          // Handle refill date - convert to proper date format for PostgreSQL
+          if (body.refillDate) {
+            try {
+              const refillDate = new Date(body.refillDate);
+              recordData.refillDate = refillDate.toISOString().split('T')[0]; // YYYY-MM-DD format
+              console.log(`🔍 Converted refillDate: "${body.refillDate}" -> "${recordData.refillDate}"`);
+            } catch (error) {
+              console.error('❌ Invalid refill date format:', body.refillDate);
+              recordData.refillDate = null;
+            }
+          } else {
+            recordData.refillDate = null;
+          }
           break;
           
         case 'appointment':
           recordData.doctorName = body.doctorName;
           recordData.location = body.location;
-          recordData.appointmentDate = body.appointmentDate ? new Date(body.appointmentDate) : null;
+          // Handle appointment date - convert to proper date format for PostgreSQL
+          if (body.appointmentDate) {
+            try {
+              const appointmentDate = new Date(body.appointmentDate);
+              recordData.appointmentDate = appointmentDate; // Keep as Date object for database
+              console.log(`🔍 Converted appointmentDate: "${body.appointmentDate}" -> "${appointmentDate.toISOString()}"`);
+            } catch (error) {
+              console.error('❌ Invalid appointment date format:', body.appointmentDate);
+              recordData.appointmentDate = null;
+            }
+          } else {
+            recordData.appointmentDate = null;
+          }
           break;
           
         case 'condition':
           recordData.severity = body.severity;
-          recordData.diagnosedDate = body.diagnosedDate ? new Date(body.diagnosedDate) : null;
+          // Handle diagnosed date - convert to proper date format for PostgreSQL
+          if (body.diagnosedDate) {
+            try {
+              const diagnosedDate = new Date(body.diagnosedDate);
+              recordData.diagnosedDate = diagnosedDate.toISOString().split('T')[0]; // YYYY-MM-DD format
+              console.log(`🔍 Converted diagnosedDate: "${body.diagnosedDate}" -> "${recordData.diagnosedDate}"`);
+            } catch (error) {
+              console.error('❌ Invalid diagnosed date format:', body.diagnosedDate);
+              recordData.diagnosedDate = null;
+            }
+          } else {
+            recordData.diagnosedDate = null;
+          }
           recordData.treatment = body.treatment;
           break;
           
@@ -531,13 +578,49 @@ export const healthRoutes = new Elysia({ prefix: '/api/health' })
           recordData.testType = body.testType;
           recordData.testResults = body.testResults;
           recordData.labFacility = body.labFacility;
-          recordData.testDate = body.testDate ? new Date(body.testDate) : null;
+          // Handle test date - convert to proper date format for PostgreSQL
+          if (body.testDate) {
+            try {
+              const testDate = new Date(body.testDate);
+              recordData.testDate = testDate.toISOString().split('T')[0]; // YYYY-MM-DD format
+              console.log(`🔍 Converted testDate: "${body.testDate}" -> "${recordData.testDate}"`);
+            } catch (error) {
+              console.error('❌ Invalid test date format:', body.testDate);
+              recordData.testDate = null;
+            }
+          } else {
+            recordData.testDate = null;
+          }
           break;
           
         case 'vaccination':
           recordData.vaccineName = body.vaccineName;
-          recordData.vaccinationDate = body.vaccinationDate ? new Date(body.vaccinationDate) : null;
-          recordData.nextDueDate = body.nextDueDate ? new Date(body.nextDueDate) : null;
+          // Handle vaccination date - convert to proper date format for PostgreSQL
+          if (body.vaccinationDate) {
+            try {
+              const vaccinationDate = new Date(body.vaccinationDate);
+              recordData.vaccinationDate = vaccinationDate.toISOString().split('T')[0]; // YYYY-MM-DD format
+              console.log(`🔍 Converted vaccinationDate: "${body.vaccinationDate}" -> "${recordData.vaccinationDate}"`);
+            } catch (error) {
+              console.error('❌ Invalid vaccination date format:', body.vaccinationDate);
+              recordData.vaccinationDate = null;
+            }
+          } else {
+            recordData.vaccinationDate = null;
+          }
+          // Handle next due date - convert to proper date format for PostgreSQL
+          if (body.nextDueDate) {
+            try {
+              const nextDueDate = new Date(body.nextDueDate);
+              recordData.nextDueDate = nextDueDate.toISOString().split('T')[0]; // YYYY-MM-DD format
+              console.log(`🔍 Converted nextDueDate: "${body.nextDueDate}" -> "${recordData.nextDueDate}"`);
+            } catch (error) {
+              console.error('❌ Invalid next due date format:', body.nextDueDate);
+              recordData.nextDueDate = null;
+            }
+          } else {
+            recordData.nextDueDate = null;
+          }
           recordData.vaccineProvider = body.vaccineProvider;
           break;
           
@@ -558,14 +641,50 @@ export const healthRoutes = new Elysia({ prefix: '/api/health' })
           recordData.duration = body.duration;
           recordData.exerciseFrequency = body.exerciseFrequency;
           recordData.therapist = body.therapist;
-          recordData.sessionDate = body.sessionDate ? new Date(body.sessionDate) : null;
+          // Handle session date - convert to proper date format for PostgreSQL
+          if (body.sessionDate) {
+            try {
+              const sessionDate = new Date(body.sessionDate);
+              recordData.sessionDate = sessionDate.toISOString().split('T')[0]; // YYYY-MM-DD format
+              console.log(`🔍 Converted sessionDate: "${body.sessionDate}" -> "${recordData.sessionDate}"`);
+            } catch (error) {
+              console.error('❌ Invalid session date format:', body.sessionDate);
+              recordData.sessionDate = null;
+            }
+          } else {
+            recordData.sessionDate = null;
+          }
           
           // Add recurrence fields for exercise/therapy
           recordData.isRecurring = body.isRecurring || false;
           recordData.recurrencePattern = body.recurrencePattern;
           recordData.recurrenceTime = body.recurrenceTime;
-          recordData.startDate = body.startDate ? new Date(body.startDate) : null;
-          recordData.endDate = body.endDate ? new Date(body.endDate) : null;
+          // Handle start date - convert to proper date format for PostgreSQL
+          if (body.startDate) {
+            try {
+              const startDate = new Date(body.startDate);
+              recordData.startDate = startDate.toISOString().split('T')[0]; // YYYY-MM-DD format
+              console.log(`🔍 Converted startDate: "${body.startDate}" -> "${recordData.startDate}"`);
+            } catch (error) {
+              console.error('❌ Invalid start date format:', body.startDate);
+              recordData.startDate = null;
+            }
+          } else {
+            recordData.startDate = null;
+          }
+          // Handle end date - convert to proper date format for PostgreSQL
+          if (body.endDate) {
+            try {
+              const endDate = new Date(body.endDate);
+              recordData.endDate = endDate.toISOString().split('T')[0]; // YYYY-MM-DD format
+              console.log(`🔍 Converted endDate: "${body.endDate}" -> "${recordData.endDate}"`);
+            } catch (error) {
+              console.error('❌ Invalid end date format:', body.endDate);
+              recordData.endDate = null;
+            }
+          } else {
+            recordData.endDate = null;
+          }
           recordData.recurrenceDays = body.recurrenceDays;
           break;
       }

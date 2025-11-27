@@ -143,22 +143,20 @@ export const pendingTasksRoutes = new Elysia({ prefix: '/api/staff' })
           });
         }
 
-        // Task 5: Medication review (for health coordinators)
-        if (user.position && user.position.toLowerCase().includes('health')) {
-          if (daysSinceAssignment > 14) {
-            pendingTasks.push({
-              id: `task_${taskIdCounter++}`,
-              type: 'medication_review',
-              title: 'Medication Review Required',
-              description: 'Senior needs a comprehensive medication review',
-              priority: 'medium',
-              seniorId: senior.seniorId,
-              seniorName: seniorFullName,
-              category: 'Health',
-              dueDate: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000), // 3 days from now
-              createdAt: new Date()
-            });
-          }
+        // Task 5: Medication review (for all staff)
+        if (daysSinceAssignment > 14) {
+          pendingTasks.push({
+            id: `task_${taskIdCounter++}`,
+            type: 'medication_review',
+            title: 'Medication Review Required',
+            description: 'Senior needs a comprehensive medication review',
+            priority: 'medium',
+            seniorId: senior.seniorId,
+            seniorName: seniorFullName,
+            category: 'Health',
+            dueDate: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000), // 3 days from now
+            createdAt: new Date()
+          });
         }
       }
 

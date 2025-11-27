@@ -20,6 +20,8 @@ import { programsRoutes } from './routes/programs';
 import { enrollmentsRoutes } from './routes/enrollments';
 import { benefitsRoutes } from './routes/benefits';
 import { profileRoutes } from './routes/profile';
+import { appointmentsRoutes } from './routes/appointments';
+import { reportsRoutes } from './routes/reports';
 
 const app = new Elysia()
   .use(cors(corsConfig))
@@ -83,6 +85,8 @@ const app = new Elysia()
   .use(enrollmentsRoutes)
   .use(benefitsRoutes)
   .use(profileRoutes)
+  .use(appointmentsRoutes)
+  .use(reportsRoutes)
   .listen({
     port: process.env.PORT || 3000,
     hostname: '0.0.0.0'
