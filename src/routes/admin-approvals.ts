@@ -121,11 +121,11 @@ export const adminApprovalsRoutes = new Elysia({ prefix: '/api/admin' })
         whereCondition = eq(users.role, 'senior');
       }
 
-      // Get seniors with user details
+      // Get seniors directly from users table (with or without seniors table entry)
       const seniorsData = await db
         .select({
-          seniorId: seniors.id,
-          userId: seniors.userId,
+          seniorId: users.id,
+          userId: users.id,
           firstName: users.firstName,
           lastName: users.lastName,
           phone: users.phone,
@@ -135,13 +135,12 @@ export const adminApprovalsRoutes = new Elysia({ prefix: '/api/admin' })
           emergencyContactName: users.emergencyContactName,
           emergencyContactPhone: users.emergencyContactPhone,
           approvalStatus: users.approvalStatus,
-          createdAt: seniors.createdAt,
+          createdAt: users.createdAt,
           userEmail: users.email,
           userUsername: users.username,
           userIsActive: users.isActive
         })
-        .from(seniors)
-        .innerJoin(users, eq(seniors.userId, users.id))
+        .from(users)
         .where(whereCondition);
 
       console.log(`📋 RESULT: Found ${seniorsData.length} seniors with status: ${status}`);
