@@ -10,7 +10,7 @@ export const coreBenefitsRoutes = new Elysia({ prefix: '/api/core-benefits' })
     .use(authMiddleware)
 
     // Get all core benefits (for senior view - shows status)
-    .get('/', async ({ user }) => {
+    .get('/', async ({ user }: any) => {
         console.log(`🔍 [CORE-BENEFITS] GET /api/core-benefits - User: ${user?.userId || 'Unknown'}`);
 
         const benefits = await db
@@ -115,9 +115,9 @@ export const coreBenefitsRoutes = new Elysia({ prefix: '/api/core-benefits' })
                 };
             }
 
-            const oldStatus = currentBenefit[0].isActive;
+            const oldStatus = currentBenefit[0]?.isActive || false;
             const newStatus = !oldStatus;
-            const benefitName = currentBenefit[0].name;
+            const benefitName = currentBenefit[0]?.name || 'Unknown';
 
             console.log(`📊 [CORE-BENEFITS-TOGGLE] Status change`);
             console.log(`   - Benefit: ${benefitName} (ID: ${benefitId})`);
@@ -187,7 +187,7 @@ export const coreBenefitsRoutes = new Elysia({ prefix: '/api/core-benefits' })
                     benefitName: benefitName,
                     oldStatus: oldStatus,
                     newStatus: newStatus,
-                    updatedAt: updated[0].updatedAt,
+                    updatedAt: updated[0]?.updatedAt,
                     notificationsSent: allSeniors.length,
                     durationMs: duration
                 }
@@ -213,7 +213,7 @@ export const coreBenefitsRoutes = new Elysia({ prefix: '/api/core-benefits' })
     })
 
     // Admin-only: Bulk toggle all benefits
-    .put('/toggle-all', async ({ body, headers, set, user: middlewareUser }) => {
+    .put('/toggle-all', async ({ body, headers, set, user: middlewareUser }: any) => {
         const startTime = Date.now();
         console.log(`\n════════════════════════════════════════════════════`);
         console.log(`🔄 [CORE-BENEFITS-BULK] START - Bulk toggle`);
@@ -358,7 +358,7 @@ export const coreBenefitsRoutes = new Elysia({ prefix: '/api/core-benefits' })
     })
 
     // Admin-only: Update benefit details
-    .put('/:id', async ({ params, body, user }) => {
+    .put('/:id', async ({ params, body, user }: any) => {
         if (!user || user.role !== 'admin') {
             throw new Error('Admin access required');
         }
