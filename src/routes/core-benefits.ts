@@ -35,18 +35,25 @@ export const coreBenefitsRoutes = new Elysia({ prefix: '/api/core-benefits' })
   })
 
   // Admin-only: Toggle benefit status  
-  .put('/:id/toggle', async ({ params, headers }) => {
+  .put('/:id/toggle', async ({ params, headers, set }) => {
+    const benefitId = parseInt(params.id);
+    console.log(`\n🔄 [CORE-BENEFITS] PUT /:id/toggle - Attempting to toggle benefit ${benefitId}`);
+    
     // Manual authentication since middleware isn't working properly
     const authHeader = headers.authorization;
-    console.log(`🔐 [CORE-BENEFITS] Auth header:`, authHeader);
+    console.log(`🔐 [CORE-BENEFITS] Auth header present: ${!!authHeader}`);
     
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       console.log(`❌ [CORE-BENEFITS] No valid auth header`);
-      throw new Error('Authorization required');
+      set.status = 401;
+      return {
+        success: false,
+        message: 'Authorization required'
+      };
     }
     
     const token = authHeader.substring(7);
-    console.log(`🎫 [CORE-BENEFITS] Token:`, token.substring(0, 20) + '...');
+    console.log(`🎫 [CORE-BENEFITS] Token: ${token.substring(0, 20)}...`);
     
     // Use the same JWT verification as auth routes
     const jwt = await import('jsonwebtoken');
@@ -55,23 +62,27 @@ export const coreBenefitsRoutes = new Elysia({ prefix: '/api/core-benefits' })
     let user;
     try {
       const decoded = jwt.verify(token, JWT_SECRET) as any;
-      console.log(`✅ [CORE-BENEFITS] JWT decoded:`, decoded);
+      console.log(`✅ [CORE-BENEFITS] JWT decoded - userId: ${decoded.userId}, role: ${decoded.role}`);
       user = decoded;
     } catch (jwtError: any) {
-      console.log(`❌ [CORE-BENEFITS] JWT verification failed:`, jwtError.message);
-      throw new Error('Invalid token');
+      console.log(`❌ [CORE-BENEFITS] JWT verification failed: ${jwtError.message}`);
+      set.status = 401;
+      return {
+        success: false,
+        message: 'Invalid token'
+      };
     }
-    console.log(`🔐 [CORE-BENEFITS] Toggle request - User:`, user);
     
     if (!user || user.role !== 'admin') {
-      console.log(`❌ [CORE-BENEFITS] Access denied - User: ${user?.userId || 'none'}, Role: ${user?.role || 'none'}`);
-      throw new Error('Admin access required');
+      console.log(`❌ [CORE-BENEFITS] Access denied - Role: ${user?.role || 'none'}`);
+      set.status = 403;
+      return {
+        success: false,
+        message: 'Admin access required'
+      };
     }
     
-    console.log(`✅ [CORE-BENEFITS] Admin access granted - User: ${user.userId}, Role: ${user.role}`);
-    
-    const benefitId = parseInt(params.id);
-    console.log(`🔄 [CORE-BENEFITS] Toggling benefit ${benefitId} by admin ${user.userId}`);
+    console.log(`✅ [CORE-BENEFITS] Admin verified - User ${user.userId}`);
     
     // Get current benefit
     const currentBenefit = await db
@@ -81,10 +92,18 @@ export const coreBenefitsRoutes = new Elysia({ prefix: '/api/core-benefits' })
       .limit(1);
     
     if (!currentBenefit.length) {
-      throw new Error('Benefit not found');
+      console.log(`❌ [CORE-BENEFITS] Benefit ${benefitId} not found`);
+      set.status = 404;
+      return {
+        success: false,
+        message: 'Benefit not found'
+      };
     }
     
-    const newStatus = !currentBenefit[0].isActive;
+    const oldStatus = currentBenefit[0].isActive;
+    const newStatus = !oldStatus;
+    
+    console.log(`📝 [CORE-BENEFITS] Updating benefit ${benefitId} from ${oldStatus} to ${newStatus}`);
     
     // Update benefit status
     const updated = await db
@@ -96,27 +115,29 @@ export const coreBenefitsRoutes = new Elysia({ prefix: '/api/core-benefits' })
       .where(eq(coreBenefits.id, benefitId))
       .returning();
     
+    console.log(`✅ [CORE-BENEFITS] Updated in DB: ${JSON.stringify(updated[0])}`);
+    
     // Create notifications for all seniors
     const allSeniors = await db
       .select({ id: users.id })
       .from(users)
       .where(eq(users.role, 'senior'));
     
-    const notificationData = allSeniors.map(senior => ({
-      userId: senior.id,
-      title: `Benefit ${newStatus ? 'Activated' : 'Deactivated'}`,
-      message: `${currentBenefit[0].name} has been ${newStatus ? 'activated' : 'deactivated'} by administration.`,
-      type: 'benefit_update',
-      relatedId: benefitId,
-      createdBy: user.userId
-    }));
-    
-    if (notificationData.length > 0) {
+    if (allSeniors.length > 0) {
+      const notificationData = allSeniors.map(senior => ({
+        userId: senior.id,
+        title: `Benefit ${newStatus ? 'Activated' : 'Deactivated'}`,
+        message: `${currentBenefit[0].name} has been ${newStatus ? 'activated' : 'deactivated'} by administration.`,
+        type: 'benefit_update',
+        relatedId: benefitId,
+        createdBy: user.userId
+      }));
+      
       await db.insert(notifications).values(notificationData);
-      console.log(`📢 [CORE-BENEFITS] Created ${notificationData.length} notifications for benefit toggle`);
+      console.log(`📢 [CORE-BENEFITS] Created ${notificationData.length} notifications`);
     }
     
-    console.log(`✅ [CORE-BENEFITS] Benefit ${benefitId} ${newStatus ? 'activated' : 'deactivated'}`);
+    console.log(`✅ [CORE-BENEFITS] Benefit ${benefitId} toggled: ${oldStatus} → ${newStatus}\n`);
     
     return {
       success: true,
