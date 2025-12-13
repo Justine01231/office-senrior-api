@@ -18,17 +18,28 @@ import { adminApprovalsRoutes } from './routes/admin-approvals';
 import { healthRoutes } from './routes/health';
 import { programsRoutes } from './routes/programs';
 import { enrollmentsRoutes } from './routes/enrollments';
+import { programApplicationsRoutes } from './routes/program-applications';
 import { benefitsRoutes } from './routes/benefits';
+import { coreBenefitsRoutes } from './routes/core-benefits';
+import { notificationsRoutes } from './routes/notifications';
 import { profileRoutes } from './routes/profile';
 import { appointmentsRoutes } from './routes/appointments';
+import { rescheduleRequestsRoutes } from './routes/reschedule-requests';
 import { reportsRoutes } from './routes/reports';
+import { financialAssistanceRoutes } from './routes/financial-assistance';
 
 const app = new Elysia()
   .use(cors(corsConfig))
   .use(securityMiddleware)
   .use(generalRateLimit)
   .onRequest((context) => {
-    console.log(`🌐 GLOBAL REQUEST: ${context.request.method} ${context.request.url}`);
+    const url = new URL(context.request.url);
+    const path = url.pathname;
+    
+    // Only log non-swagger requests
+    if (!path.includes('swagger')) {
+      console.log(`📡 ${context.request.method} ${path}`);
+    }
   })
   .use(swagger({
     documentation: {
@@ -83,12 +94,17 @@ const app = new Elysia()
   .use(healthRoutes)
   .use(programsRoutes)
   .use(enrollmentsRoutes)
+  .use(programApplicationsRoutes)
   .use(benefitsRoutes)
+  .use(coreBenefitsRoutes)
+  .use(notificationsRoutes)
   .use(profileRoutes)
   .use(appointmentsRoutes)
+  .use(rescheduleRequestsRoutes)
   .use(reportsRoutes)
+  .use(financialAssistanceRoutes)
   .listen({
-    port: process.env.PORT || 3000,
+    port: Environment.PORT,
     hostname: '0.0.0.0'
   });
 

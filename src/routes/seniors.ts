@@ -1,7 +1,7 @@
 // src/routes/seniors.ts
 import { Elysia, t } from 'elysia';
 import { db } from '../db';
-import { seniors, users } from '../db/schema';
+import { seniors, users, enrollments, benefits, programs, programApplications } from '../db/schema';
 import { eq, and } from 'drizzle-orm';
 // import { authMiddleware } from '../middleware/auth';
 
@@ -338,4 +338,76 @@ export const seniorsRoutes = new Elysia({ prefix: '/api/seniors' })
       userId: t.Number(),
       notes: t.Optional(t.String())
     })
+  })
+
+  // GET /api/seniors/counts - Get realtime program and benefit counts for all seniors
+  .get('/counts', async () => {
+    console.log('📊 Getting realtime counts for all seniors');
+    
+    try {
+      // Get all approved seniors
+      const approvedSeniors = await db.select({
+        id: users.id,
+        firstName: users.firstName,
+        lastName: users.lastName,
+        dateOfBirth: users.dateOfBirth,
+        approvalStatus: users.approvalStatus,
+      }).from(users)
+      .where(and(
+        eq(users.role, 'senior'),
+        eq(users.approvalStatus, 'approved')
+      ));
+
+      const seniorsWithCounts = await Promise.all(
+        approvedSeniors.map(async (senior) => {
+          // Count APPROVED enrollments (programs)
+          const approvedProgramApplications = await db.select({
+            id: programApplications.id,
+          }).from(programApplications)
+          .where(and(
+            eq(programApplications.seniorId, senior.id),
+            eq(programApplications.status, 'approved')
+          ));
+
+          // Count active benefits
+          const activeBenefits = await db.select({
+            id: benefits.id,
+          }).from(benefits)
+          .innerJoin(seniors, eq(benefits.seniorId, seniors.id))
+          .where(and(
+            eq(seniors.userId, senior.id),
+            eq(benefits.status, 'active')
+          ));
+
+          // Calculate age
+          const birthDate = new Date(senior.dateOfBirth || '1950-01-01');
+          const today = new Date();
+          const age = today.getFullYear() - birthDate.getFullYear() - 
+                     (today.getMonth() < birthDate.getMonth() || 
+                      (today.getMonth() === birthDate.getMonth() && today.getDate() < birthDate.getDate()) ? 1 : 0);
+
+          return {
+            id: senior.id,
+            name: `${senior.firstName || ''} ${senior.lastName || ''}`.trim(),
+            age: age,
+            programsCount: approvedProgramApplications.length,
+            benefitsCount: activeBenefits.length,
+            status: 'active' // Since we're only getting approved seniors
+          };
+        })
+      );
+
+      return {
+        success: true,
+        data: seniorsWithCounts
+      };
+      
+    } catch (error) {
+      console.error('❌ Error getting senior counts:', error);
+      return {
+        success: false,
+        message: 'Failed to get senior counts',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      };
+    }
   })

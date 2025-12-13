@@ -27,15 +27,19 @@ export const authMiddleware = new Elysia()
     try {
       const decoded = jwt.verify(token, JWT_SECRET) as any;
       console.log('✅ JWT verified successfully:', decoded);
+      console.log('🔍 Decoded role specifically:', decoded.role, 'type:', typeof decoded.role);
       
       const user = {
         userId: decoded.userId,
-        email: decoded.email,
+        username: decoded.username,
+        email: decoded.email || null,
         role: decoded.role,
-        seniorId: decoded.seniorId
+        seniorId: decoded.seniorId || null,
+        id: decoded.userId // Add id field for compatibility
       };
       
       console.log('👤 User object created:', user);
+      console.log('🔍 Final user role:', user.role, 'type:', typeof user.role);
       return { user };
     } catch (error: any) {
       console.log('❌ JWT verification failed:', error?.message);

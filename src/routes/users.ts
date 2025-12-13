@@ -261,6 +261,7 @@ export const usersRoutes = new Elysia({ prefix: '/api/users' })
         success: true,
         data: {
           totalUsers,
+          registeredSeniors: seniorCount,  // Make it clear this is the seniors count
           adminCount,
           staffCount,
           seniorCount

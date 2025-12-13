@@ -345,10 +345,16 @@ export const healthRoutes = new Elysia({ prefix: '/api/health' })
         console.log(`📋 Cleaned record - ID: ${record.id}, seniorName: "${record.seniorName}", seniorLastName: "${record.seniorLastName}"`);
       });
 
+      const message = cleanedRecords.length === 0 
+        ? 'No health records available yet'
+        : 'Health records retrieved successfully';
+
       return {
         success: true,
-        message: 'Health records retrieved successfully',
-        data: cleanedRecords
+        message: message,
+        data: cleanedRecords,
+        count: cleanedRecords.length,
+        isEmpty: cleanedRecords.length === 0
       };
     } catch (error) {
       console.error(`❌ Health records error:`, error);

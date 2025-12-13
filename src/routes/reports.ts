@@ -111,7 +111,7 @@ export const reportsRoutes = new Elysia({ prefix: '/api/reports' })
       
       const totalAppointments = totalAppointmentsResult[0]?.count || 0;
       
-      // Get staff assignments count (active programs)
+      // Get staff assignments count (active assignments)
       const activeProgramsResult = await db
         .select({ count: sql<number>`count(*)` })
         .from(staffAssignments)

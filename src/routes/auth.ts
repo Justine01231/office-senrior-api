@@ -102,9 +102,14 @@ export const authRoutes = new Elysia({ prefix: '/auth' })
   // Login endpoint
   .post('/login', async ({ body, set }) => {
     try {
-      console.log('🔐 Login attempt started');
+      console.log('');
+      console.log('═══════════════════════════════════════════════════════');
+      console.log('🔐 LOGIN REQUEST RECEIVED FROM ANDROID APP');
+      console.log('═══════════════════════════════════════════════════════');
       const { username, password } = body as LoginRequest;
-      console.log('🔐 Login for username:', username);
+      console.log('📱 Client: Android App');
+      console.log('👤 Username:', username);
+      console.log('⏰ Timestamp:', new Date().toLocaleString());
 
       // Validate input
       if (!username || !password) {
@@ -116,9 +121,9 @@ export const authRoutes = new Elysia({ prefix: '/auth' })
       }
 
       // Find user
-      console.log('🔐 Looking up user in database...');
+      console.log('🔍 Looking up user in database...');
       const userWithPassword = await AuthService.findUserByUsername(username);
-      console.log('🔐 User lookup result:', userWithPassword ? 'Found' : 'Not found');
+      console.log('✅ User lookup result:', userWithPassword ? `Found (${userWithPassword.role})` : '❌ Not found');
       if (!userWithPassword) {
         set.status = 401;
         return {
@@ -161,6 +166,14 @@ export const authRoutes = new Elysia({ prefix: '/auth' })
       const refreshExpiry = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
       await AuthService.storeRefreshToken(user.id, refreshToken, refreshExpiry);
 
+      console.log('✅ LOGIN SUCCESSFUL');
+      console.log('👤 User:', user.username);
+      console.log('🎭 Role:', user.role);
+      console.log('🔑 JWT Token Generated');
+      console.log('⏱️  Token expires in: 24 hours');
+      console.log('═══════════════════════════════════════════════════════');
+      console.log('');
+      
       return {
         success: true,
         message: 'Login successful',

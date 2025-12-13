@@ -2,7 +2,7 @@
 import { Elysia, t } from 'elysia';
 import { db } from '../db';
 import { users, staffAssignments, healthRecords } from '../db/schema';
-import { eq, and, count, desc, sql } from 'drizzle-orm';
+import { eq, and, count, desc, sql, inArray } from 'drizzle-orm';
 import * as jwt from 'jsonwebtoken';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'office-seniors-super-secret-jwt-key-2024-change-this-in-production';
@@ -313,7 +313,7 @@ export const staffDashboardRoutes = new Elysia({ prefix: '/api/staff' })
         })
         .from(healthRecords)
         .leftJoin(users, eq(healthRecords.seniorId, users.id))
-        .where(sql`${healthRecords.seniorId} IN (${seniorIds.join(',')})`)
+        .where(inArray(healthRecords.seniorId, seniorIds))
         .orderBy(desc(healthRecords.createdAt))
         .limit(limitNum);
       

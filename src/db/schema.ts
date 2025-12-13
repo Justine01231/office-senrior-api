@@ -8,7 +8,7 @@ export const users = pgTable('users', {
   email: varchar('email', { length: 255 }),
   passwordHash: varchar('password_hash', { length: 255 }).notNull(),
   role: varchar('role', { length: 50 }).notNull().default('senior'), // admin, staff, senior
-  department: varchar('department', { length: 50 }), // health_records, benefits, programs, general (for staff only)
+  department: varchar('department', { length: 50 }), // health_records, benefits, general (for staff only)
   
   // Basic Info (for all users)
   firstName: varchar('first_name', { length: 100 }),
@@ -23,9 +23,10 @@ export const users = pgTable('users', {
   emergencyContactName: varchar('emergency_contact_name', { length: 100 }),
   emergencyContactPhone: varchar('emergency_contact_phone', { length: 20 }),
   photoPath: varchar('photo_path', { length: 255 }),
+  avatar: varchar('avatar', { length: 50 }).default('ocean_blue'), // ocean_blue, sunset_red, royal_purple, or custom
   
   // Staff-specific fields
-  position: varchar('position', { length: 100 }), // Staff position: Senior Care Coordinator, Program Coordinator, etc.
+  position: varchar('position', { length: 100 }), // Staff position: Health Coordinator
   assignedBy: integer('assigned_by'), // For staff created by admin - references users.id
   
   // Status & Completion tracking
@@ -150,8 +151,9 @@ export const programs = pgTable('programs', {
 // ENROLLMENTS TABLE
 export const enrollments = pgTable('enrollments', {
   id: serial('id').primaryKey(),
-  seniorId: integer('senior_id').references(() => seniors.id, { onDelete: 'cascade' }).notNull(),
+  seniorId: integer('senior_id').references(() => users.id, { onDelete: 'cascade' }).notNull(), // Reference users.id directly
   programId: integer('program_id').references(() => programs.id, { onDelete: 'cascade' }).notNull(),
+  applicationId: integer('application_id').references(() => programApplications.id, { onDelete: 'set null' }), // Link to approved application
   enrollmentDate: date('enrollment_date').defaultNow(),
   status: varchar('status', { length: 50 }).default('active'),
   attendanceCount: integer('attendance_count').default(0),
@@ -301,6 +303,54 @@ export const documents = pgTable('documents', {
   updatedAt: timestamp('updated_at').defaultNow(),
 });
 
+// CORE BENEFITS TABLE - Global benefit definitions
+export const coreBenefits = pgTable('core_benefits', {
+  id: serial('id').primaryKey(),
+  name: varchar('name', { length: 200 }).notNull(),
+  description: text('description').notNull(),
+  icon: varchar('icon', { length: 50 }).notNull(), // emoji or icon name
+  category: varchar('category', { length: 100 }).notNull(),
+  isActive: boolean('is_active').default(true), // Global toggle
+  displayOrder: integer('display_order').default(0),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+});
+
+// NOTIFICATIONS TABLE - For senior notifications
+export const notifications = pgTable('notifications', {
+  id: serial('id').primaryKey(),
+  userId: integer('user_id').references(() => users.id, { onDelete: 'cascade' }).notNull(), // Senior who receives notification
+  title: varchar('title', { length: 200 }).notNull(),
+  message: text('message').notNull(),
+  type: varchar('type', { length: 50 }).notNull(), // benefit_update, system, appointment, etc.
+  relatedId: integer('related_id'), // ID of related entity (benefit, appointment, etc.)
+  isRead: boolean('is_read').default(false),
+  createdBy: integer('created_by').references(() => users.id), // Who created the notification (usually admin/staff)
+  createdAt: timestamp('created_at').defaultNow(),
+  readAt: timestamp('read_at'),
+});
+
+// PROGRAM APPLICATIONS TABLE - For tracking program application workflow
+export const programApplications = pgTable('program_applications', {
+  id: serial('id').primaryKey(),
+  seniorId: integer('senior_id').references(() => users.id, { onDelete: 'cascade' }).notNull(),
+  programId: integer('program_id').references(() => programs.id, { onDelete: 'cascade' }).notNull(),
+  applicationDate: date('application_date').defaultNow(),
+  status: varchar('status', { length: 50 }).default('pending'), // pending, approved, rejected
+  statusUpdatedAt: timestamp('status_updated_at').defaultNow(),
+  statusUpdatedBy: integer('status_updated_by').references(() => users.id), // Admin who updated status
+  statusReason: text('status_reason'), // Reason for approval/rejection
+  
+  // Application details
+  motivation: text('motivation'), // Why senior wants to join this program
+  notes: text('notes'), // Admin notes
+  priority: varchar('priority', { length: 20 }).default('medium'), // low, medium, high
+  
+  // Tracking
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+});
+
 // USER AUDIT LOG TABLE
 export const userAuditLog = pgTable('user_audit_log', {
   id: serial('id').primaryKey(),
@@ -309,4 +359,50 @@ export const userAuditLog = pgTable('user_audit_log', {
   ipAddress: varchar('ip_address', { length: 45 }),
   userAgent: text('user_agent'),
   timestamp: timestamp('timestamp').defaultNow(),
+});
+
+// RESCHEDULE REQUESTS TABLE - For appointment reschedule management
+export const rescheduleRequests = pgTable('reschedule_requests', {
+  id: serial('id').primaryKey(),
+  appointmentId: integer('appointment_id').notNull(), // references appointments.id
+  seniorId: integer('senior_id').notNull(), // references users.id
+  requestedBy: integer('requested_by').notNull(), // references users.id (who made the request)
+  
+  // Request details
+  reason: text('reason').notNull(), // Why reschedule is needed
+  requestedDate: varchar('requested_date', { length: 20 }).notNull(), // New preferred date
+  requestedTime: varchar('requested_time', { length: 20 }).notNull(), // New preferred time
+  
+  // Status tracking
+  status: varchar('status', { length: 20 }).default('pending'), // pending, approved, rejected
+  
+  // Approval fields
+  approvedBy: integer('approved_by'), // references users.id (staff who approved)
+  approvedAt: timestamp('approved_at'),
+  finalDate: varchar('final_date', { length: 20 }), // Final approved date
+  finalTime: varchar('final_time', { length: 20 }), // Final approved time
+  approvalNotes: text('approval_notes'),
+  
+  // Rejection fields
+  rejectedBy: integer('rejected_by'), // references users.id (staff who rejected)
+  rejectedAt: timestamp('rejected_at'),
+  rejectionReason: text('rejection_reason'),
+  
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+});
+
+// FINANCIAL DISTRIBUTIONS TABLE - Track direct financial assistance to seniors
+export const financialDistributions = pgTable('financial_distributions', {
+  id: serial('id').primaryKey(),
+  seniorId: integer('senior_id').notNull(), // references users.id (senior receiving assistance)
+  amount: varchar('amount', { length: 20 }).notNull(), // Amount as string to preserve decimal precision (e.g., "500.00")
+  distributionDate: date('distribution_date').notNull(), // When assistance was allocated
+  status: varchar('status', { length: 20 }).default('unclaimed'), // unclaimed, claimed
+  claimedDate: timestamp('claimed_date'), // When senior claimed the assistance
+  category: varchar('category', { length: 50 }).notNull(), // Emergency Aid, Monthly Allowance, Medical Subsidy, Housing Support, Other
+  description: text('description'), // Additional details about the assistance
+  createdBy: integer('created_by').notNull(), // references users.id (admin who created it)
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
 });

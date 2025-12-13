@@ -29,6 +29,15 @@ export const staffRoutes = new Elysia({ prefix: '/staff' })
       throw new Error('Only admins can create staff accounts');
     }
     
+    // Validate position - only allow Health Coordinator
+    const validPositions = ['Health Coordinator'];
+    if (!validPositions.includes(body.position)) {
+      return {
+        success: false,
+        message: 'Invalid position. Only "Health Coordinator" is allowed.'
+      };
+    }
+    
     try {
       // Check if username already exists
       const existingUser = await db.select({

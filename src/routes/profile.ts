@@ -51,6 +51,8 @@ export const profileRoutes = new Elysia({ prefix: '/api' })
         isActive: users.isActive,
         profileCompleted: users.profileCompleted,
         approvalStatus: users.approvalStatus,
+        avatar: users.avatar,
+        photoPath: users.photoPath,
         createdAt: users.createdAt,
         updatedAt: users.updatedAt
       })
@@ -98,6 +100,8 @@ export const profileRoutes = new Elysia({ prefix: '/api' })
           emergencyContactName: body.emergencyContactName || undefined,
           emergencyContactPhone: body.emergencyContactPhone || undefined,
           socialSecurity: body.socialSecurity || undefined,
+          avatar: body.avatar || undefined,
+          photoPath: body.photoPath || undefined,
           updatedAt: new Date()
         })
         .where(eq(users.id, (user as any).userId))
@@ -118,6 +122,8 @@ export const profileRoutes = new Elysia({ prefix: '/api' })
           isActive: users.isActive,
           profileCompleted: users.profileCompleted,
           approvalStatus: users.approvalStatus,
+          avatar: users.avatar,
+          photoPath: users.photoPath,
           createdAt: users.createdAt,
           updatedAt: users.updatedAt
         });
@@ -150,7 +156,9 @@ export const profileRoutes = new Elysia({ prefix: '/api' })
       dateOfBirth: t.Optional(t.String()),
       emergencyContactName: t.Optional(t.String()),
       emergencyContactPhone: t.Optional(t.String()),
-      socialSecurity: t.Optional(t.String())
+      socialSecurity: t.Optional(t.String()),
+      avatar: t.Optional(t.String()),
+      photoPath: t.Optional(t.String())
     })
   })
 
@@ -173,6 +181,7 @@ export const profileRoutes = new Elysia({ prefix: '/api' })
           emergencyContactName: body.emergencyContactName || undefined,
           emergencyContactPhone: body.emergencyContactPhone || undefined,
           socialSecurity: body.socialSecurity || undefined,
+          avatar: body.avatar || undefined,
           profileCompleted: true, // Mark profile as completed
           updatedAt: new Date()
         })
@@ -195,6 +204,8 @@ export const profileRoutes = new Elysia({ prefix: '/api' })
           isActive: users.isActive,
           profileCompleted: users.profileCompleted,
           approvalStatus: users.approvalStatus,
+          avatar: users.avatar,
+          photoPath: users.photoPath,
           createdAt: users.createdAt,
           updatedAt: users.updatedAt
         });
@@ -226,7 +237,8 @@ export const profileRoutes = new Elysia({ prefix: '/api' })
       gender: t.String(),
       emergencyContactName: t.String(),
       emergencyContactPhone: t.String(),
-      socialSecurity: t.Optional(t.String())
+      socialSecurity: t.Optional(t.String()),
+      avatar: t.Optional(t.String())
     })
   })
 
@@ -266,6 +278,8 @@ export const profileRoutes = new Elysia({ prefix: '/api' })
         isActive: users.isActive,
         profileCompleted: users.profileCompleted,
         approvalStatus: users.approvalStatus,
+        avatar: users.avatar,
+        photoPath: users.photoPath,
         createdAt: users.createdAt,
         updatedAt: users.updatedAt
       })
@@ -297,4 +311,56 @@ export const profileRoutes = new Elysia({ prefix: '/api' })
         message: error?.message || 'Failed to get senior profile'
       };
     }
+  })
+
+  // PUT /api/profile/avatar - Update user avatar
+  .put('/profile/avatar', async ({ user, body }) => {
+    console.log('🎨 UPDATE AVATAR REQUEST: User=' + user?.userId, body);
+    
+    try {
+      if (!user) {
+        throw new Error('Authentication required');
+      }
+
+      const [updatedUser] = await db.update(users)
+        .set({
+          avatar: body.avatar,
+          photoPath: body.photoPath || null,
+          updatedAt: new Date()
+        })
+        .where(eq(users.id, (user as any).userId))
+        .returning({
+          id: users.id,
+          username: users.username,
+          firstName: users.firstName,
+          lastName: users.lastName,
+          avatar: users.avatar,
+          photoPath: users.photoPath,
+          updatedAt: users.updatedAt
+        });
+
+      if (!updatedUser) {
+        throw new Error('Failed to update avatar');
+      }
+
+      console.log(`✅ Avatar updated for user: ${updatedUser?.firstName} ${updatedUser?.lastName} to ${updatedUser?.avatar}`);
+
+      return {
+        success: true,
+        message: 'Avatar updated successfully',
+        data: updatedUser
+      };
+
+    } catch (error: any) {
+      console.error('❌ Update avatar error:', error);
+      return {
+        success: false,
+        message: error?.message || 'Failed to update avatar'
+      };
+    }
+  }, {
+    body: t.Object({
+      avatar: t.String(),
+      photoPath: t.Optional(t.String())
+    })
   });

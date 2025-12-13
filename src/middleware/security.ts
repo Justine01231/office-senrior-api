@@ -26,9 +26,14 @@ export const securityMiddleware = new Elysia()
     const method = request.method;
     if (['POST', 'PUT', 'PATCH'].includes(method)) {
       const contentType = request.headers.get('content-type');
-      if (!contentType || !contentType.includes('application/json')) {
-        set.status = 415;
-        throw new Error('Unsupported Media Type. Expected application/json');
+      // Only validate if there's a body (content-length > 0)
+      const contentLength = request.headers.get('content-length');
+      if (contentLength && parseInt(contentLength) > 0) {
+        if (!contentType || !contentType.includes('application/json')) {
+          console.warn('⚠️ Invalid Content-Type:', contentType, 'for method:', method);
+          set.status = 415;
+          throw new Error('Unsupported Media Type. Expected application/json');
+        }
       }
     }
     

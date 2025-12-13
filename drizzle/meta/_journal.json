@@ -43,6 +43,13 @@
       "when": 1762505943450,
       "tag": "0005_organic_black_panther",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1764239284685,
+      "tag": "0006_mysterious_true_believers",
+      "breakpoints": true
     }
   ]
 }
