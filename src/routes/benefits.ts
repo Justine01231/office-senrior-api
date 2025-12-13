@@ -1,7 +1,7 @@
 // src/routes/benefits.ts
 import { Elysia, t } from 'elysia';
 import { db } from '../db';
-import { benefits, benefitApplications, applicationStatusHistory, users, seniors, staffAssignments } from '../db/schema';
+import { benefits, benefitApplications, applicationStatusHistory, users, seniors, staffAssignments, documents } from '../db/schema';
 import { eq, desc, and, sql, count } from 'drizzle-orm';
 import { authMiddleware } from '../middleware/auth';
 import { requireModuleAccess } from '../middleware/module-access';
