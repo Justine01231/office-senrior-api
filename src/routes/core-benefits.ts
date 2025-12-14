@@ -7,11 +7,12 @@ import { authMiddleware } from '../middleware/auth';
 import { requireModuleAccess } from '../middleware/module-access';
 
 export const coreBenefitsRoutes = new Elysia({ prefix: '/api/core-benefits' })
-    .use(authMiddleware)
+    // Public endpoint - no auth required for viewing available benefits
+    // .use(authMiddleware)
 
     // Get all core benefits (for senior view - shows status)
-    .get('/', async ({ user }: any) => {
-        console.log(`🔍 [CORE-BENEFITS] GET /api/core-benefits - User: ${user?.userId || 'Unknown'}`);
+    .get('/', async () => {
+        console.log(`🔍 [CORE-BENEFITS] GET /api/core-benefits - Public endpoint`);
 
         const benefits = await db
             .select({
