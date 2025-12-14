@@ -127,27 +127,41 @@ export const coreBenefitsRoutes = new Elysia({ prefix: '/api/core-benefits' })
 
             // Update benefit status
             console.log(`📝 [CORE-BENEFITS-TOGGLE] Updating database...`);
-            const updated = await db
-                .update(coreBenefits)
-                .set({
-                    isActive: newStatus,
-                    updatedAt: new Date()
-                })
-                .where(eq(coreBenefits.id, benefitId))
-                .returning();
-
-            if (!updated.length) {
-                console.log(`❌ [CORE-BENEFITS-TOGGLE] FAILED: Database update returned no rows`);
+            let updated;
+            try {
+                updated = await db
+                    .update(coreBenefits)
+                    .set({
+                        isActive: newStatus,
+                        updatedAt: new Date()
+                    })
+                    .where(eq(coreBenefits.id, benefitId))
+                    .returning();
+                console.log(`✅ [CORE-BENEFITS-TOGGLE] Database update query executed`);
+            } catch (dbError: any) {
+                console.log(`❌ [CORE-BENEFITS-TOGGLE] Database update FAILED: ${dbError.message}`);
                 set.status = 500;
                 return {
                     success: false,
                     message: 'Failed to update benefit status',
-                    error: 'Database update failed'
+                    error: dbError.message
+                };
+            }
+
+            if (!updated || !updated.length) {
+                console.log(`❌ [CORE-BENEFITS-TOGGLE] FAILED: Database update returned no rows`);
+                console.log(`   - Updated value: ${JSON.stringify(updated)}`);
+                set.status = 500;
+                return {
+                    success: false,
+                    message: 'Failed to update benefit status',
+                    error: 'Database update returned no rows'
                 };
             }
 
             console.log(`✅ [CORE-BENEFITS-TOGGLE] Database updated successfully`);
             console.log(`   - Updated record: ${JSON.stringify(updated[0])}`);
+            console.log(`   - New isActive value: ${updated[0]?.isActive}`);
 
             // Create notifications for all seniors
             console.log(`📢 [CORE-BENEFITS-TOGGLE] Fetching all seniors for notifications...`);

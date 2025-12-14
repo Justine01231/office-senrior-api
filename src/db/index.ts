@@ -12,10 +12,11 @@ if (!process.env.DATABASE_URL) {
 const connectionString = process.env.DATABASE_URL;
 
 // Create postgres client with timeout settings
+// Increased timeouts for Render deployment stability
 const client = postgres(connectionString, {
-  idle_timeout: 20,
-  max_lifetime: 60 * 30,
-  connect_timeout: 10, // 10 seconds timeout for connection
+  idle_timeout: 60, // 60 seconds idle timeout (was 20)
+  max_lifetime: 60 * 60, // 1 hour max lifetime (was 30 minutes)
+  connect_timeout: 30, // 30 seconds timeout for connection (was 10)
 });
 
 // Create drizzle instance
