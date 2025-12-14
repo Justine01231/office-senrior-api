@@ -132,6 +132,18 @@ export const authRoutes = new Elysia({ prefix: '/auth' })
         } as AuthResponse;
       }
 
+      // Verify password - CRITICAL SECURITY CHECK
+      console.log('🔐 Verifying password...');
+      const passwordMatch = await AuthService.verifyPassword(password, userWithPassword.passwordHash);
+      console.log('🔑 Password verification result:', passwordMatch ? '✅ MATCH' : '❌ MISMATCH');
+      if (!passwordMatch) {
+        set.status = 401;
+        return {
+          success: false,
+          message: 'Invalid username or password'
+        } as AuthResponse;
+      }
+
       // Check user status (especially for seniors)
       if (!userWithPassword.isActive) {
         // Allow pending seniors to login so they can complete their profile

@@ -11,28 +11,44 @@ export const coreBenefitsRoutes = new Elysia({ prefix: '/api/core-benefits' })
     // .use(authMiddleware)
 
     // Get all core benefits (for senior view - shows status)
-    .get('/', async () => {
-        console.log(`🔍 [CORE-BENEFITS] GET /api/core-benefits - Public endpoint`);
+    .get('/', async ({ headers }) => {
+        const timestamp = new Date().toISOString();
+        console.log('\n════════════════════════════════════════════════════════');
+        console.log(`📋 [CORE-BENEFITS] GET /api/core-benefits`);
+        console.log(`⏰ Timestamp: ${timestamp}`);
+        console.log(`🔐 Authorization: ${headers.authorization ? '✅ Present' : '❌ Missing'}`);
 
-        const benefits = await db
-            .select({
-                id: coreBenefits.id,
-                name: coreBenefits.name,
-                description: coreBenefits.description,
-                icon: coreBenefits.icon,
-                category: coreBenefits.category,
-                isActive: coreBenefits.isActive,
-                displayOrder: coreBenefits.displayOrder,
-            })
-            .from(coreBenefits)
-            .orderBy(coreBenefits.displayOrder);
+        try {
+            const benefits = await db
+                .select({
+                    id: coreBenefits.id,
+                    name: coreBenefits.name,
+                    description: coreBenefits.description,
+                    icon: coreBenefits.icon,
+                    category: coreBenefits.category,
+                    isActive: coreBenefits.isActive,
+                    displayOrder: coreBenefits.displayOrder,
+                })
+                .from(coreBenefits)
+                .orderBy(coreBenefits.displayOrder);
 
-        console.log(`✅ [CORE-BENEFITS] Found ${benefits.length} core benefits`);
-        return {
-            success: true,
-            data: benefits,
-            count: benefits.length
-        };
+            console.log(`✅ [CORE-BENEFITS] Successfully fetched ${benefits.length} benefits`);
+            console.log(`📊 Benefits Status:`);
+            benefits.forEach(b => {
+                console.log(`   - ${b.name}: ${b.isActive ? '🟢 ACTIVE' : '🔴 INACTIVE'}`);
+            });
+            console.log('════════════════════════════════════════════════════════\n');
+            
+            return {
+                success: true,
+                data: benefits,
+                count: benefits.length
+            };
+        } catch (error: any) {
+            console.log(`❌ [CORE-BENEFITS] Error fetching benefits: ${error.message}`);
+            console.log('════════════════════════════════════════════════════════\n');
+            throw error;
+        }
     })
 
     // Admin-only: Toggle benefit status  
@@ -88,6 +104,7 @@ export const coreBenefitsRoutes = new Elysia({ prefix: '/api/core-benefits' })
                 console.log(`❌ [CORE-BENEFITS-TOGGLE] FAILED: Access denied`);
                 console.log(`   - Provided role: ${user?.role || 'none'}`);
                 console.log(`   - Required role: admin`);
+                console.log(`════════════════════════════════════════════════════\n`);
                 set.status = 403;
                 return {
                     success: false,
@@ -96,7 +113,10 @@ export const coreBenefitsRoutes = new Elysia({ prefix: '/api/core-benefits' })
                 };
             }
 
-            console.log(`✅ [CORE-BENEFITS-TOGGLE] Admin verified - User ${user.userId}`);
+            console.log(`✅ [CORE-BENEFITS-TOGGLE] Admin verified`);
+            console.log(`   - User ID: ${user.userId}`);
+            console.log(`   - Username: ${user.username || 'N/A'}`);
+            console.log(`   - Role: ${user.role}`);
 
             // Get current benefit
             console.log(`📍 [CORE-BENEFITS-TOGGLE] Querying database for benefit ${benefitId}...`);
@@ -189,7 +209,10 @@ export const coreBenefitsRoutes = new Elysia({ prefix: '/api/core-benefits' })
             const duration = Date.now() - startTime;
             console.log(`════════════════════════════════════════════════════`);
             console.log(`✅ [CORE-BENEFITS-TOGGLE] SUCCESS`);
-            console.log(`✅ Benefit ${benefitId} toggled: ${oldStatus} → ${newStatus}`);
+            console.log(`🎯 Benefit: ${benefitName} (ID: ${benefitId})`);
+            console.log(`📊 Status Change: ${oldStatus ? '🟢 ACTIVE' : '🔴 INACTIVE'} → ${newStatus ? '🟢 ACTIVE' : '🔴 INACTIVE'}`);
+            console.log(`👤 Admin: ${user.username || `User ${user.userId}`}`);
+            console.log(`📢 Notifications: Sent to ${allSeniors.length} seniors`);
             console.log(`⏱️  Duration: ${duration}ms`);
             console.log(`════════════════════════════════════════════════════\n`);
 
