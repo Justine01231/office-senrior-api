@@ -19,7 +19,6 @@ import { healthRoutes } from './routes/health';
 import { programsRoutes } from './routes/programs';
 import { enrollmentsRoutes } from './routes/enrollments';
 import { programApplicationsRoutes } from './routes/program-applications';
-import { benefitsRoutes } from './routes/benefits';
 import { coreBenefitsRoutes } from './routes/core-benefits';
 import { notificationsRoutes } from './routes/notifications';
 import { profileRoutes } from './routes/profile';
@@ -35,7 +34,7 @@ const app = new Elysia()
   .onRequest((context) => {
     const url = new URL(context.request.url);
     const path = url.pathname;
-    
+
     // Only log non-swagger requests
     if (!path.includes('swagger')) {
       console.log(`📡 ${context.request.method} ${path}`);
@@ -66,7 +65,7 @@ const app = new Elysia()
       if (!authHeader) {
         return { success: false, message: 'Authorization required' };
       }
-      
+
       // Simple user count statistics
       return {
         success: true,
@@ -95,7 +94,6 @@ const app = new Elysia()
   .use(programsRoutes)
   .use(enrollmentsRoutes)
   .use(programApplicationsRoutes)
-  .use(benefitsRoutes)
   .use(coreBenefitsRoutes)
   .use(notificationsRoutes)
   .use(profileRoutes)
