@@ -22,11 +22,11 @@ export const adminApprovalsRoutes = new Elysia({ prefix: '/api/admin' })
       throw new Error('Invalid token');
     }
   })
-  
+
   // Get pending seniors awaiting approval
   .get('/pending-seniors', async ({ user }) => {
     console.log('🔍 PENDING SENIORS REQUEST - User:', user.username);
-    
+
     try {
       // Verify admin role
       if (user.role !== 'admin') {
@@ -96,7 +96,7 @@ export const adminApprovalsRoutes = new Elysia({ prefix: '/api/admin' })
   .get('/seniors', async ({ user, query }) => {
     const status = query.status;
     console.log(`🔍 ADMIN SENIORS FILTER REQUEST - Status: ${status}, User: ${user.username}`);
-    
+
     try {
       // Verify admin role
       if (user.role !== 'admin') {
@@ -188,7 +188,7 @@ export const adminApprovalsRoutes = new Elysia({ prefix: '/api/admin' })
   .post('/approve-senior/:id', async ({ params, user }) => {
     const seniorId = parseInt(params.id);
     console.log(`✅ Admin approving senior ID: ${seniorId}, by user:`, user.username);
-    
+
     try {
       // Verify admin role
       if (user.role !== 'admin') {
@@ -198,25 +198,35 @@ export const adminApprovalsRoutes = new Elysia({ prefix: '/api/admin' })
         };
       }
 
-      // Check if senior exists and is pending
-      const existingSenior = await db
+      // Check if user exists and is a pending senior (using USER ID not senior table ID)
+      const existingUser = await db
         .select({
-          userId: seniors.userId,
+          id: users.id,
+          role: users.role,
           approvalStatus: users.approvalStatus
         })
-        .from(seniors)
-        .innerJoin(users, eq(seniors.userId, users.id))
-        .where(eq(seniors.id, seniorId))
+        .from(users)
+        .where(eq(users.id, seniorId))  // seniorId is actually the USER ID from Android
         .limit(1);
 
-      if (existingSenior.length === 0) {
+      if (existingUser.length === 0) {
+        console.log(`❌ User ${seniorId} not found`);
         return {
           success: false,
           message: 'Senior not found'
         };
       }
 
-      if (existingSenior[0]?.approvalStatus !== 'pending') {
+      if (existingUser[0]?.role !== 'senior') {
+        console.log(`❌ User ${seniorId} is not a senior`);
+        return {
+          success: false,
+          message: 'User is not a senior'
+        };
+      }
+
+      if (existingUser[0]?.approvalStatus !== 'pending') {
+        console.log(`❌ Senior ${seniorId} not pending (status: ${existingUser[0]?.approvalStatus})`);
         return {
           success: false,
           message: 'Senior is not in pending status'
@@ -233,7 +243,7 @@ export const adminApprovalsRoutes = new Elysia({ prefix: '/api/admin' })
           approvedAt: new Date(),
           updatedAt: new Date()
         })
-        .where(eq(users.id, existingSenior[0].userId));
+        .where(eq(users.id, seniorId));  // Use the user ID directly
 
       console.log(`✅ Senior ${seniorId} approved successfully by admin ${user.username}`);
 
@@ -255,7 +265,7 @@ export const adminApprovalsRoutes = new Elysia({ prefix: '/api/admin' })
   .post('/reject-senior/:id', async ({ params, user, body }) => {
     const seniorId = parseInt(params.id);
     console.log(`❌ Admin rejecting senior ID: ${seniorId}, by user:`, user.username);
-    
+
     try {
       // Verify admin role
       if (user.role !== 'admin') {
@@ -265,32 +275,42 @@ export const adminApprovalsRoutes = new Elysia({ prefix: '/api/admin' })
         };
       }
 
-      // Check if senior exists and is pending
-      const existingSenior = await db
+      // Check if user exists and is a pending senior (using USER ID not senior table ID)
+      const existingUser = await db
         .select({
-          userId: seniors.userId,
+          id: users.id,
+          role: users.role,
           approvalStatus: users.approvalStatus
         })
-        .from(seniors)
-        .innerJoin(users, eq(seniors.userId, users.id))
-        .where(eq(seniors.id, seniorId))
+        .from(users)
+        .where(eq(users.id, seniorId))  // seniorId is actually the USER ID from Android
         .limit(1);
 
-      if (existingSenior.length === 0) {
+      if (existingUser.length === 0) {
+        console.log(`❌ User ${seniorId} not found`);
         return {
           success: false,
           message: 'Senior not found'
         };
       }
 
-      if (existingSenior[0]?.approvalStatus !== 'pending') {
+      if (existingUser[0]?.role !== 'senior') {
+        console.log(`❌ User ${seniorId} is not a senior`);
+        return {
+          success: false,
+          message: 'User is not a senior'
+        };
+      }
+
+      if (existingUser[0]?.approvalStatus !== 'pending') {
+        console.log(`❌ Senior ${seniorId} not pending (status: ${existingUser[0]?.approvalStatus})`);
         return {
           success: false,
           message: 'Senior is not in pending status'
         };
       }
 
-      // Update user approval status (not seniors table)
+      // Update user approval status
       await db
         .update(users)
         .set({
@@ -299,16 +319,10 @@ export const adminApprovalsRoutes = new Elysia({ prefix: '/api/admin' })
           approvedAt: new Date(),
           updatedAt: new Date()
         })
-        .where(eq(users.id, existingSenior[0].userId));
+        .where(eq(users.id, seniorId));  // Use the user ID directly
 
-      // Update seniors table with rejection notes
-      await db
-        .update(seniors)
-        .set({
-          notes: body?.reason || 'No reason provided',
-          updatedAt: new Date()
-        })
-        .where(eq(seniors.id, seniorId));
+      // Note: We don't update seniors table for rejection notes since
+      // the senior might not have a seniors table entry yet
 
       console.log(`❌ Senior ${seniorId} rejected by admin ${user.username}`);
 
